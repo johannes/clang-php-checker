@@ -25,26 +25,6 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class ArgValidator {
-  unsigned offset;
-  const CallEvent &Call;
-  CheckerContext &C;
-
-  BugType &InvalidTypeBugType;
-  BugType &WrongArgumentNumberBugType;
-
-  QualType getTypeForCurrentArg();
-  void compareTypeWithNextArg(const std::string &expectedType);
-
-public:
-  ArgValidator(const CallEvent &Call, CheckerContext &C, unsigned offset,
-               BugType &InvalidTypeBugType,
-               BugType &WrongArgumentNumberBugType);
-  ~ArgValidator();
-
-  void operator<<(char modifier);  
-};
-
 class PHPZPPChecker : public Checker<check::PreCall> {
   mutable IdentifierInfo *IIzpp, *IIzpp_ex, *IIzpmp, *IIzpmp_ex;
 
@@ -56,7 +36,9 @@ class PHPZPPChecker : public Checker<check::PreCall> {
   void initIdentifierInfo(ASTContext &Ctx) const;
 
   const StringLiteral *getCStringLiteral(CheckerContext &C, SVal val) const;
-
+  const QualType getTypeForSVal(SVal val) const;
+  void compareTypeWithSVal(SVal val, const std::string &expectedType) const;
+  void check(SVal val, char modifier) const;
 public:
   PHPZPPChecker();
 
@@ -64,105 +46,89 @@ public:
 };
 
 } // end anonymous namespace
-
-ArgValidator::ArgValidator(const CallEvent &Call, CheckerContext &C,
-                           unsigned offset, BugType &InvalidTypeBugType,
-                           BugType &WrongArgumentNumberBugType)
-    : offset(offset), Call(Call), C(C),
-      InvalidTypeBugType(InvalidTypeBugType),
-      WrongArgumentNumberBugType(WrongArgumentNumberBugType) {}
-
+/*
 ArgValidator::~ArgValidator() {
 
-  if (Call.getNumArgs() > 1 + offset) {
-    BugReport *R = new BugReport(WrongArgumentNumberBugType,
-                                 "Too many arguments for format specified",
-                                 C.addTransition());
-    R->markInteresting(Call.getArgSVal(offset + 1));
-    C.emitReport(R);
-  }
-}
 
-QualType ArgValidator::getTypeForCurrentArg() {
+}
+*/
+const QualType PHPZPPChecker::getTypeForSVal(SVal val) const {
   const TypedValueRegion *TR = dyn_cast_or_null<TypedValueRegion>(
-      Call.getArgSVal(offset).getAsRegion());
+      val.getAsRegion());
   return TR->getLocationType().getCanonicalType();
 }
 
-void ArgValidator::compareTypeWithNextArg(const std::string &expectedType) {
-  if (Call.getNumArgs() <= ++offset) {
-    BugReport *R = new BugReport(WrongArgumentNumberBugType,
-                                 "Too few arguments for format specified",
-                                 C.addTransition());
-    C.emitReport(R);
+void PHPZPPChecker::compareTypeWithSVal(SVal val, const std::string &expectedType) const {
+/*
 
-    return;
-  }
-  if (expectedType != getTypeForCurrentArg().getAsString()) {
+*/
+  if (expectedType != getTypeForSVal(val).getAsString()) {
     // std::cout << std::endl << expectedType << " != " <<
     // getTypeForNextArg().getAsString() << std::endl;
+/*
     BugReport *R = new BugReport(
         InvalidTypeBugType,
         std::string("Arguments don't match the type expected by the format "
                     "string (") +
             expectedType + std::string(" != ") +
-            getTypeForCurrentArg().getAsString() + std::string(")"),
+            getTypeForSVal(val).getAsString() + std::string(")"),
         C.addTransition());
-    R->markInteresting(Call.getArgSVal(offset));
+    R->markInteresting(val));
     C.emitReport(R);
+*/
   }
 }
 
-void ArgValidator::operator<<(char modifier) {
+void PHPZPPChecker::check(SVal val, char modifier) const {
   switch (modifier) {
   case 'a':
   case 'A':
-    compareTypeWithNextArg("struct _zval_struct **");
+    compareTypeWithSVal(val, "struct _zval_struct **");
     break;
   case 'b':
-    compareTypeWithNextArg("unsigned char *");
+    compareTypeWithSVal(val, "unsigned char *");
     break;
   case 'C':
-    compareTypeWithNextArg("struct _zend_class_entry **");
+    compareTypeWithSVal(val, "struct _zend_class_entry **");
     break;
   case 'd':
-    compareTypeWithNextArg("double *");
+    compareTypeWithSVal(val, "double *");
     break;
   case 'f':
-    compareTypeWithNextArg("struct _zend_fcall_info *");
-    compareTypeWithNextArg("struct _zend_fcall_info_cache *");
+    compareTypeWithSVal(val, "struct _zend_fcall_info *");
+    compareTypeWithSVal(val, "struct _zend_fcall_info_cache *"); ///// TODO
     break;
   case 'h':
   case 'H':
-    compareTypeWithNextArg("struct _hashtable **");
+    compareTypeWithSVal(val, "struct _hashtable **");
     break;
   case 'l':
   case 'L':
-    compareTypeWithNextArg("long *");
+    compareTypeWithSVal(val, "long *");
     break;
   case 'o':
-    compareTypeWithNextArg("struct _zend_class_entry **");
+    compareTypeWithSVal(val, "struct _zend_class_entry **");
     break;
   case 'O':
-    compareTypeWithNextArg("struct _zend_class_entry **");
-    compareTypeWithNextArg("struct _zend_class_entry *");
+    compareTypeWithSVal(val, "struct _zend_class_entry **");
+    compareTypeWithSVal(val, "struct _zend_class_entry *"); ///////// TODO
     break;
   case 'p':
-    compareTypeWithNextArg("char **");
-    compareTypeWithNextArg("int *");
+    compareTypeWithSVal(val, "char **");
+    compareTypeWithSVal(val, "int *"); ///////// TODO
     break;
   case 'r':
-    compareTypeWithNextArg("struct _zval_struct **");
+    compareTypeWithSVal(val, "struct _zval_struct **");
     break;
   case 's':
-    compareTypeWithNextArg("char **");
-    compareTypeWithNextArg("int *");
+    compareTypeWithSVal(val, "char **");
+    compareTypeWithSVal(val, "int *");   /////////// TODO
     break;
   case 'z':
-    compareTypeWithNextArg("struct _zval_struct **");
+    compareTypeWithSVal(val, "struct _zval_struct **");
     break;
   case 'Z':
-    compareTypeWithNextArg("struct _zval_struct ***");
+    compareTypeWithSVal(val, "struct _zval_struct ***");
     break;
   case '|':
   case '/':
@@ -170,8 +136,8 @@ void ArgValidator::operator<<(char modifier) {
     break;
   case '+':
   case '*':
-    compareTypeWithNextArg("struct _zval_struct ****");
-    compareTypeWithNextArg("int *");
+    compareTypeWithSVal(val, "struct _zval_struct ****");
+    compareTypeWithSVal(val, "int *");   ////// TODO
   default:
     break;
     // error
@@ -246,11 +212,26 @@ void PHPZPPChecker::checkPreCall(const CallEvent &Call,
   }
   StringRef format_spec = format_spec_sl->getBytes();
 
-  ArgValidator validator(Call, C, offset, *InvalidTypeBugType,
-                         *WrongArgumentNumberBugType);
   for (StringRef::const_iterator it = format_spec.begin();
        it != format_spec.end(); ++it) {
-    validator << *it;
+    if (Call.getNumArgs() <= ++offset) {
+      BugReport *R = new BugReport(WrongArgumentNumberBugType,
+                                   "Too few arguments for format specified",
+                                   C.addTransition());
+      C.emitReport(R);
+    }
+
+    return;
+  }
+    check(Call.getArgSVal(offset), *it);
+  }
+
+  if (Call.getNumArgs() > 1 + offset) {
+    BugReport *R = new BugReport(WrongArgumentNumberBugType,
+                                 "Too many arguments for format specified",
+                                 C.addTransition());
+    R->markInteresting(Call.getArgSVal(offset + 1));
+    C.emitReport(R);
   }
 }
 
