@@ -190,8 +190,8 @@ void PHPZPPChecker::checkPreCall(const CallEvent &Call,
   PHPTypeMap map = getMap<PHP55>();
 
   for (StringRef::const_iterator it = format_spec.begin();
-       it != format_spec.end(); ++it) {
-    if (Call.getNumArgs() <= ++offset) {
+       it != format_spec.end(); ++it, ++offset) {
+    if (Call.getNumArgs() <= offset) {
       BugReport *R = new BugReport(*WrongArgumentNumberBugType,
                                    "Too few arguments for format specified",
                                    C.addTransition());
@@ -200,10 +200,10 @@ void PHPZPPChecker::checkPreCall(const CallEvent &Call,
     }
 
     PHPTypeRange range = map.equal_range(*it);
-    for (PHPTypeMap::iterator it = range.first; it != range.second; ++it) {
-      if (it->second) {
-        SVal val = Call.getArgSVal(++offset);
-        compareTypeWithSVal(val, *it->second);
+    for (PHPTypeMap::iterator iit = range.first; iit != range.second; ++iit) {
+      if (iit->second) {
+        SVal val = Call.getArgSVal(offset);
+        compareTypeWithSVal(val, *iit->second);
       }
     }
   }
