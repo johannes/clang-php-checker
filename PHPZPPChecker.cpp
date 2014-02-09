@@ -24,7 +24,55 @@
 using namespace clang;
 using namespace ento;
 
+typedef llvm::Optional<const std::string> PHPNativeType;
+typedef std::multimap<char, PHPNativeType> PHPTypeMap;
+typedef std::pair<PHPTypeMap::iterator, PHPTypeMap::iterator> PHPTypeRange;
+
+#define BEGIN_MAP(versionname) \
+  struct versionname; \
+  template<> \
+  PHPTypeMap getMap<versionname>() { \
+    PHPTypeMap retval;
+
+#define MAPPING(format, type) retval.insert(std::pair<char, PHPNativeType>((format), std::string(type)))
+#define MAPPING_EMPTY(format) retval.insert(std::pair<char, PHPNativeType>((format), PHPNativeType()));
+#define END_MAPPING() return retval; }
+
 namespace {
+template <typename T>
+PHPTypeMap getMap() {}
+
+BEGIN_MAP(PHP55) {
+  MAPPING('a', "struct _zval_struct **");
+  MAPPING('A', "struct _zval_struct **");
+  MAPPING('b', "unsigned char *");
+  MAPPING('C', "struct _zend_class_entry **");
+  MAPPING('d', "double *");
+  MAPPING('f', "struct _zend_fcall_info *");
+  MAPPING('f', "struct _zend_fcall_info_cache *");
+  MAPPING('h', "struct _hashtable **");
+  MAPPING('H', "struct _hashtable **");
+  MAPPING('l', "long *");
+  MAPPING('L', "long *");
+  MAPPING('o', "struct _zend_class_entry **");
+  MAPPING('O', "struct _zend_class_entry **");
+  MAPPING('O', "struct _zend_class_entry *");
+  MAPPING('p', "char **");
+  MAPPING('p', "int *");
+  MAPPING('r', "struct _zval_struct **");
+  MAPPING('s', "char **");
+  MAPPING('s', "int *");
+  MAPPING('z', "struct _zval_struct **");
+  MAPPING('Z', "struct _zval_struct ***");
+  MAPPING_EMPTY('|');
+  MAPPING_EMPTY('/');
+  MAPPING_EMPTY('!')
+  MAPPING('+', "struct _zval_struct ****");
+  MAPPING('+', "int *");		    
+  MAPPING('*', "struct _zval_struct ****");
+  MAPPING('*', "int *");
+} END_MAPPING()
+
 class PHPZPPChecker : public Checker<check::PreCall> {
   mutable IdentifierInfo *IIzpp, *IIzpp_ex, *IIzpmp, *IIzpmp_ex;
 
@@ -101,71 +149,6 @@ void PHPZPPChecker::compareTypeWithSVal(SVal val, const std::string &expectedTyp
   }
 }
 
-void PHPZPPChecker::check(SVal val, char modifier) const {
-  switch (modifier) {
-  case 'a':
-  case 'A':
-    compareTypeWithSVal(val, "struct _zval_struct **");
-    break;
-  case 'b':
-    compareTypeWithSVal(val, "unsigned char *");
-    break;
-  case 'C':
-    compareTypeWithSVal(val, "struct _zend_class_entry **");
-    break;
-  case 'd':
-    compareTypeWithSVal(val, "double *");
-    break;
-  case 'f':
-    compareTypeWithSVal(val, "struct _zend_fcall_info *");
-    compareTypeWithSVal(val, "struct _zend_fcall_info_cache *"); ///// TODO
-    break;
-  case 'h':
-  case 'H':
-    compareTypeWithSVal(val, "struct _hashtable **");
-    break;
-  case 'l':
-  case 'L':
-    compareTypeWithSVal(val, "long *");
-    break;
-  case 'o':
-    compareTypeWithSVal(val, "struct _zend_class_entry **");
-    break;
-  case 'O':
-    compareTypeWithSVal(val, "struct _zend_class_entry **");
-    compareTypeWithSVal(val, "struct _zend_class_entry *"); ///////// TODO
-    break;
-  case 'p':
-    compareTypeWithSVal(val, "char **");
-    compareTypeWithSVal(val, "int *"); ///////// TODO
-    break;
-  case 'r':
-    compareTypeWithSVal(val, "struct _zval_struct **");
-    break;
-  case 's':
-    compareTypeWithSVal(val, "char **");
-    compareTypeWithSVal(val, "int *");   /////////// TODO
-    break;
-  case 'z':
-    compareTypeWithSVal(val, "struct _zval_struct **");
-    break;
-  case 'Z':
-    compareTypeWithSVal(val, "struct _zval_struct ***");
-    break;
-  case '|':
-  case '/':
-  case '!':
-    break;
-  case '+':
-  case '*':
-    compareTypeWithSVal(val, "struct _zval_struct ****");
-    compareTypeWithSVal(val, "int *");   ////// TODO
-  default:
-    break;
-    // error
-  }
-}
-
 void PHPZPPChecker::checkPreCall(const CallEvent &Call,
                                  CheckerContext &C) const {
   initIdentifierInfo(C.getASTContext());
@@ -204,22 +187,29 @@ void PHPZPPChecker::checkPreCall(const CallEvent &Call,
   }
   StringRef format_spec = format_spec_sl->getBytes();
 
+  PHPTypeMap map = getMap<PHP55>();
+
   for (StringRef::const_iterator it = format_spec.begin();
        it != format_spec.end(); ++it) {
     if (Call.getNumArgs() <= ++offset) {
-      BugReport *R = new BugReport(WrongArgumentNumberBugType,
+      BugReport *R = new BugReport(*WrongArgumentNumberBugType,
                                    "Too few arguments for format specified",
                                    C.addTransition());
       C.emitReport(R);
+      return;
     }
 
-    return;
-  }
-    check(Call.getArgSVal(offset), *it);
+    PHPTypeRange range = map.equal_range(*it);
+    for (PHPTypeMap::iterator it = range.first; it != range.second; ++it) {
+      if (it->second) {
+        SVal val = Call.getArgSVal(++offset);
+        compareTypeWithSVal(val, *it->second);
+      }
+    }
   }
 
   if (Call.getNumArgs() > 1 + offset) {
-    BugReport *R = new BugReport(WrongArgumentNumberBugType,
+    BugReport *R = new BugReport(*WrongArgumentNumberBugType,
                                  "Too many arguments for format specified",
                                  C.addTransition());
     R->markInteresting(Call.getArgSVal(offset + 1));
