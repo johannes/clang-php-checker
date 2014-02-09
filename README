@@ -1,0 +1,1 @@
+make -C tools/clang/tools/php-checker
