@@ -46,12 +46,37 @@ public:
 };
 
 } // end anonymous namespace
-/*
-ArgValidator::~ArgValidator() {
 
+PHPZPPChecker::PHPZPPChecker()
+    : IIzpp(0), IIzpp_ex(0), IIzpmp(0), IIzpmp_ex(0), TSRMBuild(false) {
+  InvalidTypeBugType.reset(new BugType("Invalid type", "PHP ZPP API Error"));
 
+  WrongArgumentNumberBugType.reset(
+      new BugType("Wrong number of zpp arguments", "PHP ZPP API Error"));
 }
-*/
+
+const StringLiteral *PHPZPPChecker::getCStringLiteral(CheckerContext &C,
+                                                      SVal val) const {
+
+  // Copied from tools/clang/lib/StaticAnalyzer/Checkers/CStringChecker.cpp
+
+  // Get the memory region pointed to by the val.
+  const MemRegion *bufRegion = val.getAsRegion();
+  if (!bufRegion)
+    return NULL;
+
+  // Strip casts off the memory region.
+  bufRegion = bufRegion->StripCasts();
+
+  // Cast the memory region to a string region.
+  const StringRegion *strRegion = dyn_cast<StringRegion>(bufRegion);
+  if (!strRegion)
+    return NULL;
+
+  // Return the actual string in the string region.
+  return strRegion->getStringLiteral();
+}
+
 const QualType PHPZPPChecker::getTypeForSVal(SVal val) const {
   const TypedValueRegion *TR = dyn_cast_or_null<TypedValueRegion>(
       val.getAsRegion());
@@ -59,9 +84,6 @@ const QualType PHPZPPChecker::getTypeForSVal(SVal val) const {
 }
 
 void PHPZPPChecker::compareTypeWithSVal(SVal val, const std::string &expectedType) const {
-/*
-
-*/
   if (expectedType != getTypeForSVal(val).getAsString()) {
     // std::cout << std::endl << expectedType << " != " <<
     // getTypeForNextArg().getAsString() << std::endl;
@@ -142,36 +164,6 @@ void PHPZPPChecker::check(SVal val, char modifier) const {
     break;
     // error
   }
-}
-
-PHPZPPChecker::PHPZPPChecker()
-    : IIzpp(0), IIzpp_ex(0), IIzpmp(0), IIzpmp_ex(0), TSRMBuild(false) {
-  InvalidTypeBugType.reset(new BugType("Invalid type", "PHP ZPP API Error"));
-
-  WrongArgumentNumberBugType.reset(
-      new BugType("Wrong number of zpp arguments", "PHP ZPP API Error"));
-}
-
-const StringLiteral *PHPZPPChecker::getCStringLiteral(CheckerContext &C,
-                                                      SVal val) const {
-
-  // Copied from tools/clang/lib/StaticAnalyzer/Checkers/CStringChecker.cpp
-
-  // Get the memory region pointed to by the val.
-  const MemRegion *bufRegion = val.getAsRegion();
-  if (!bufRegion)
-    return NULL;
-
-  // Strip casts off the memory region.
-  bufRegion = bufRegion->StripCasts();
-
-  // Cast the memory region to a string region.
-  const StringRegion *strRegion = dyn_cast<StringRegion>(bufRegion);
-  if (!strRegion)
-    return NULL;
-
-  // Return the actual string in the string region.
-  return strRegion->getStringLiteral();
 }
 
 void PHPZPPChecker::checkPreCall(const CallEvent &Call,
