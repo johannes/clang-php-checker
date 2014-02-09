@@ -267,10 +267,11 @@ void PHPZPPChecker::initIdentifierInfo(ASTContext &Ctx) const {
   TSRMBuild = tsrm->hasMacroDefinition();
 }
 
-extern "C" {
+extern "C"
 void clang_registerCheckers (CheckerRegistry &registry) {
   registry.addChecker<PHPZPPChecker>("php.PHPZPPChecker55", "Check zend_parse_parameter usage for PHP 5.3 - 5.5");
 }
 
+extern "C"
 const char clang_analyzerAPIVersionString[] = CLANG_ANALYZER_API_VERSION_STRING;
-}
+
