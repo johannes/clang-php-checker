@@ -202,6 +202,8 @@ void PHPZPPChecker::checkPreCall(const CallEvent &Call,
     for (PHPTypeMap::iterator iit = range.first; iit != range.second;
          ++iit, ++offset) {
       if (!iit->second) {
+        // Current modifier doesn't need an argument, these are special things
+	// like |, ! or /
         continue;
       }
       if (Call.getNumArgs() <= offset) {
