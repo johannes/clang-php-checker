@@ -209,7 +209,8 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
       getCStringLiteral(C, Call.getArgSVal(offset));
   if (!format_spec_sl) {
     // TODO need a good way to report this, even though this is no error
-    std::cout << "Couldn't get format string\n";
+    std::cout << "Couldn't get format string looked at offset " << offset << std::endl;
+    Call.dump();
     return;
   }
   StringRef format_spec = format_spec_sl->getBytes();
