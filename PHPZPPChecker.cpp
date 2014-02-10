@@ -260,7 +260,7 @@ void PHPZPPCheckerImpl::initIdentifierInfo(ASTContext &Ctx) const {
   IIzpmp = &Ctx.Idents.get("zend_parse_method_parameters");
   IIzpmp_ex = &Ctx.Idents.get("zend_parse_method_parameters_ex");
 
-  IdentifierInfo *tsrm = &Ctx.Idents.get("TSRMLS_CC");
+  IdentifierInfo *tsrm = &Ctx.Idents.get("ZTS");
   TSRMBuild = tsrm->hasMacroDefinition();
 }
 
