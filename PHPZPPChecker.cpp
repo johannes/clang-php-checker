@@ -85,7 +85,7 @@ class PHPZPPChecker : public Checker<check::PreCall> {
 
   const StringLiteral *getCStringLiteral(CheckerContext &C, SVal val) const;
   const QualType getTypeForSVal(SVal val) const;
-  void compareTypeWithSVal(SVal val, const std::string &expectedType) const;
+  bool compareTypeWithSVal(SVal val, const std::string &expectedType, CheckerContext &C) const;
   void check(SVal val, char modifier) const;
 public:
   PHPZPPChecker();
@@ -131,22 +131,20 @@ const QualType PHPZPPChecker::getTypeForSVal(SVal val) const {
   return TR->getLocationType().getCanonicalType();
 }
 
-void PHPZPPChecker::compareTypeWithSVal(SVal val, const std::string &expectedType) const {
+bool PHPZPPChecker::compareTypeWithSVal(SVal val, const std::string &expectedType, CheckerContext &C) const {
   if (expectedType != getTypeForSVal(val).getAsString()) {
-    // std::cout << std::endl << expectedType << " != " <<
-    // getTypeForNextArg().getAsString() << std::endl;
-/*
     BugReport *R = new BugReport(
-        InvalidTypeBugType,
+        *InvalidTypeBugType,
         std::string("Arguments don't match the type expected by the format "
                     "string (") +
             expectedType + std::string(" != ") +
             getTypeForSVal(val).getAsString() + std::string(")"),
         C.addTransition());
-    R->markInteresting(val));
+    R->markInteresting(val);
     C.emitReport(R);
-*/
+    return false;
   }
+  return true;
 }
 
 void PHPZPPChecker::checkPreCall(const CallEvent &Call,
@@ -188,31 +186,36 @@ void PHPZPPChecker::checkPreCall(const CallEvent &Call,
   StringRef format_spec = format_spec_sl->getBytes();
 
   PHPTypeMap map = getMap<PHP55>();
+  ++offset;
 
   for (StringRef::const_iterator it = format_spec.begin();
-       it != format_spec.end(); ++it, ++offset) {
-    if (Call.getNumArgs() <= offset) {
-      BugReport *R = new BugReport(*WrongArgumentNumberBugType,
-                                   "Too few arguments for format specified",
-                                   C.addTransition());
-      C.emitReport(R);
-      return;
-    }
+       it != format_spec.end(); ++it) {
 
     PHPTypeRange range = map.equal_range(*it);
-    for (PHPTypeMap::iterator iit = range.first; iit != range.second; ++iit) {
-      if (iit->second) {
-        SVal val = Call.getArgSVal(offset);
-        compareTypeWithSVal(val, *iit->second);
+    for (PHPTypeMap::iterator iit = range.first; iit != range.second; ++iit, ++offset) {
+      if (!iit->second) {
+        continue;
+      }
+      if (Call.getNumArgs() <= offset) {
+        BugReport *R = new BugReport(*WrongArgumentNumberBugType,
+                                     "Too few arguments for format specified",
+                                     C.addTransition());
+        C.emitReport(R);
+        return;
+      }
+
+      SVal val = Call.getArgSVal(offset);
+      if (!compareTypeWithSVal(val, *iit->second, C)) {
+        // TODO: Move error reporting here?
       }
     }
   }
 
-  if (Call.getNumArgs() > 1 + offset) {
+  if (Call.getNumArgs() > offset) {
     BugReport *R = new BugReport(*WrongArgumentNumberBugType,
                                  "Too many arguments for format specified",
                                  C.addTransition());
-    R->markInteresting(Call.getArgSVal(offset + 1));
+    R->markInteresting(Call.getArgSVal(offset));
     C.emitReport(R);
   }
 }
