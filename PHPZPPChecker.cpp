@@ -76,6 +76,13 @@ BEGIN_MAP(PHP55) {
 }
 END_MAPPING()
 
+BEGIN_MAP(PHPSample) {
+  MAPPING('a', "struct _zval_struct **");
+  MAPPING('A', "struct _zval_struct **");
+}
+END_MAPPING()
+
+
 class PHPZPPCheckerImpl {
   mutable IdentifierInfo *IIzpp, *IIzpp_ex, *IIzpmp, *IIzpmp_ex;
 
@@ -216,7 +223,7 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
     for (PHPTypeMap::iterator iit = range.first; iit != range.second;
          ++iit, ++offset) {
       if (!iit->second) {
-        // Current modifier doesn't need an argument, these are special things
+        // Current modifier doesn't need an arguement, these are special things
         // like |, ! or /
         continue;
       }
@@ -259,8 +266,11 @@ void PHPZPPCheckerImpl::initIdentifierInfo(ASTContext &Ctx) const {
 
 extern "C" void clang_registerCheckers(CheckerRegistry &registry) {
   registry.addChecker<PHPZPPChecker<PHP55> >(
-      "php.PHPZPPCheckerImpl55",
+      "php.ZPPChecker55",
       "Check zend_parse_parameter usage for PHP 5.3 - 5.5");
+  registry.addChecker<PHPZPPChecker<PHPSample> >(
+      "php.ZPPCheckerSample",
+      "This is a sample, to be replaced with size_t version");
 }
 
 extern "C" const char clang_analyzerAPIVersionString[] =
