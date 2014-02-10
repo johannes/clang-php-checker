@@ -221,12 +221,13 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
 
     PHPTypeRange range = map.equal_range(*it);
     for (PHPTypeMap::iterator iit = range.first; iit != range.second;
-         ++iit, ++offset) {
+         ++iit) {
       if (!iit->second) {
         // Current modifier doesn't need an arguement, these are special things
         // like |, ! or /
         continue;
       }
+      ++offset;
       if (Call.getNumArgs() <= offset) {
         BugReport *R = new BugReport(*WrongArgumentNumberBugType,
                                      "Too few arguments for format specified",
