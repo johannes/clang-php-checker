@@ -1,20 +1,9 @@
-##===- examples/analyzer-plugin/Makefile -------------------*- Makefile -*-===##
-# 
-#                     The LLVM Compiler Infrastructure
-#
-# This file is distributed under the University of Illinois Open Source
-# License. See LICENSE.TXT for details.
-# 
-##===----------------------------------------------------------------------===##
+LLVM_CONFIG ?= llvm-config
+CXX ?= clang++
 
-CLANG_LEVEL := ../..
-LIBRARYNAME = PHPChecker
+FLAGS = `$(LLVM_CONFIG) --cxxflags` $(CXXFLAGS)
 
-LINK_LIBS_IN_SHARED = 0
-LOADABLE_MODULE = 1
+PHPChecker.so: PHPZPPChecker.cpp
+	$(CXX) $(FLAGS) -shared -o PHPChecker.so PHPZPPChecker.cpp
 
-include $(CLANG_LEVEL)/Makefile
-
-ifeq ($(OS),Darwin)
-  LDFLAGS=-Wl,-undefined,dynamic_lookup
-endif
+all: PHPChecker.so
