@@ -28,19 +28,21 @@ typedef llvm::Optional<const std::string> PHPNativeType;
 typedef std::multimap<char, PHPNativeType> PHPTypeMap;
 typedef std::pair<PHPTypeMap::iterator, PHPTypeMap::iterator> PHPTypeRange;
 
-#define BEGIN_MAP(versionname) \
-  struct versionname; \
-  template<> \
-  PHPTypeMap getMap<versionname>() { \
+#define BEGIN_MAP(versionname)                                                 \
+  struct versionname;                                                          \
+  template <> PHPTypeMap getMap<versionname>() {                               \
     PHPTypeMap retval;
 
-#define MAPPING(format, type) retval.insert(std::pair<char, PHPNativeType>((format), std::string(type)))
-#define MAPPING_EMPTY(format) retval.insert(std::pair<char, PHPNativeType>((format), PHPNativeType()));
-#define END_MAPPING() return retval; }
+#define MAPPING(format, type)                                                  \
+  retval.insert(std::pair<char, PHPNativeType>((format), std::string(type)))
+#define MAPPING_EMPTY(format)                                                  \
+  retval.insert(std::pair<char, PHPNativeType>((format), PHPNativeType()));
+#define END_MAPPING()                                                          \
+  return retval;                                                               \
+  }
 
 namespace {
-template <typename T>
-PHPTypeMap getMap() {}
+template <typename T> PHPTypeMap getMap() {}
 
 BEGIN_MAP(PHP55) {
   MAPPING('a', "struct _zval_struct **");
@@ -68,10 +70,11 @@ BEGIN_MAP(PHP55) {
   MAPPING_EMPTY('/');
   MAPPING_EMPTY('!')
   MAPPING('+', "struct _zval_struct ****");
-  MAPPING('+', "int *");		    
+  MAPPING('+', "int *");
   MAPPING('*', "struct _zval_struct ****");
   MAPPING('*', "int *");
-} END_MAPPING()
+}
+END_MAPPING()
 
 class PHPZPPChecker : public Checker<check::PreCall> {
   mutable IdentifierInfo *IIzpp, *IIzpp_ex, *IIzpmp, *IIzpmp_ex;
@@ -85,8 +88,10 @@ class PHPZPPChecker : public Checker<check::PreCall> {
 
   const StringLiteral *getCStringLiteral(CheckerContext &C, SVal val) const;
   const QualType getTypeForSVal(SVal val) const;
-  bool compareTypeWithSVal(SVal val, const std::string &expectedType, CheckerContext &C) const;
+  bool compareTypeWithSVal(SVal val, const std::string &expectedType,
+                           CheckerContext &C) const;
   void check(SVal val, char modifier) const;
+
 public:
   PHPZPPChecker();
 
@@ -126,12 +131,14 @@ const StringLiteral *PHPZPPChecker::getCStringLiteral(CheckerContext &C,
 }
 
 const QualType PHPZPPChecker::getTypeForSVal(SVal val) const {
-  const TypedValueRegion *TR = dyn_cast_or_null<TypedValueRegion>(
-      val.getAsRegion());
+  const TypedValueRegion *TR =
+      dyn_cast_or_null<TypedValueRegion>(val.getAsRegion());
   return TR->getLocationType().getCanonicalType();
 }
 
-bool PHPZPPChecker::compareTypeWithSVal(SVal val, const std::string &expectedType, CheckerContext &C) const {
+bool PHPZPPChecker::compareTypeWithSVal(SVal val,
+                                        const std::string &expectedType,
+                                        CheckerContext &C) const {
   if (expectedType != getTypeForSVal(val).getAsString()) {
     BugReport *R = new BugReport(
         *InvalidTypeBugType,
@@ -192,7 +199,8 @@ void PHPZPPChecker::checkPreCall(const CallEvent &Call,
        it != format_spec.end(); ++it) {
 
     PHPTypeRange range = map.equal_range(*it);
-    for (PHPTypeMap::iterator iit = range.first; iit != range.second; ++iit, ++offset) {
+    for (PHPTypeMap::iterator iit = range.first; iit != range.second;
+         ++iit, ++offset) {
       if (!iit->second) {
         continue;
       }
@@ -233,11 +241,11 @@ void PHPZPPChecker::initIdentifierInfo(ASTContext &Ctx) const {
   TSRMBuild = tsrm->hasMacroDefinition();
 }
 
-extern "C"
-void clang_registerCheckers (CheckerRegistry &registry) {
-  registry.addChecker<PHPZPPChecker>("php.PHPZPPChecker55", "Check zend_parse_parameter usage for PHP 5.3 - 5.5");
+extern "C" void clang_registerCheckers(CheckerRegistry &registry) {
+  registry.addChecker<PHPZPPChecker>(
+      "php.PHPZPPChecker55",
+      "Check zend_parse_parameter usage for PHP 5.3 - 5.5");
 }
 
-extern "C"
-const char clang_analyzerAPIVersionString[] = CLANG_ANALYZER_API_VERSION_STRING;
-
+extern "C" const char clang_analyzerAPIVersionString[] =
+    CLANG_ANALYZER_API_VERSION_STRING;
