@@ -84,7 +84,7 @@ BEGIN_MAP(PHP55) {
 }
 END_MAPPING()
 
-// TODO: This is a sample, please placeeeeeee it if you add support for a new
+// TODO: This is a sample, please replace it if you add support for a new
 // PHP version
 BEGIN_MAP(PHPSample) {
   MAPPING('a', "struct _zval_struct **");
