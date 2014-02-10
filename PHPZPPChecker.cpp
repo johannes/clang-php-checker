@@ -25,25 +25,33 @@ using namespace clang;
 using namespace ento;
 
 typedef llvm::Optional<const std::string> PHPNativeType;
-typedef std::multimap<char, PHPNativeType> PHPTypeMap;
-typedef std::pair<PHPTypeMap::iterator, PHPTypeMap::iterator> PHPTypeRange;
+typedef std::multimap<char, const PHPNativeType> PHPTypeMap;
+typedef std::pair<const PHPTypeMap::const_iterator, const PHPTypeMap::const_iterator> PHPTypeRange;
 
 #define BEGIN_MAP(versionname)                                                 \
   struct versionname;                                                          \
-  template <> PHPTypeMap getMap<versionname>() {                               \
+  template <> const PHPTypeMap getMap<versionname>() {                         \
     PHPTypeMap retval;
 
 #define MAPPING(format, type)                                                  \
-  retval.insert(std::pair<char, PHPNativeType>((format), std::string(type)))
+  retval.insert(std::pair<char, const PHPNativeType>((format), std::string(type)))
 #define MAPPING_EMPTY(format)                                                  \
-  retval.insert(std::pair<char, PHPNativeType>((format), PHPNativeType()));
+  retval.insert(std::pair<char, const PHPNativeType>((format), PHPNativeType()));
 #define END_MAPPING()                                                          \
   return retval;                                                               \
   }
 
 namespace {
-template <typename T> PHPTypeMap getMap() {}
+template <typename T> const PHPTypeMap getMap() {}
 
+// These mappings map a zpp modifier to underlying types. Mind that we
+// reference the canonical form here, thus HashTable becomes struct _hashtable.
+// Also mind the indirection level: zpp receives the address of the object to
+// store in wich adds a level.
+// Some types return multiple values, these are added multiple times inorder to
+// this list (i.e. a string "s" consists of a char array and length)
+// The identifier (i.e. PHP55) has to ve a valid C++ identifier as we declare a
+// struct using it and use it as template parameter type.
 BEGIN_MAP(PHP55) {
   MAPPING('a', "struct _zval_struct **");
   MAPPING('A', "struct _zval_struct **");
@@ -76,6 +84,8 @@ BEGIN_MAP(PHP55) {
 }
 END_MAPPING()
 
+// TODO: This is a sample, please placeeeeeee it if you add support for a new
+// PHP version
 BEGIN_MAP(PHPSample) {
   MAPPING('a', "struct _zval_struct **");
   MAPPING('A', "struct _zval_struct **");
@@ -91,23 +101,29 @@ class PHPZPPCheckerImpl {
 
   mutable bool TSRMBuild;
 
-  // TODO: This could be made non-mutable
-  mutable PHPTypeMap map;
+  const PHPTypeMap map;
 
   void initIdentifierInfo(ASTContext &Ctx) const;
 
-  const StringLiteral *getCStringLiteral(CheckerContext &C, SVal val) const;
-  const QualType getTypeForSVal(SVal val) const;
-  bool compareTypeWithSVal(SVal val, const std::string &expectedType,
+  const StringLiteral *getCStringLiteral(const SVal val) const;
+  const QualType getTypeForSVal(const SVal val) const;
+  bool compareTypeWithSVal(const SVal val, const std::string &expectedType,
                            CheckerContext &C) const;
-  void check(SVal val, char modifier) const;
 
 public:
-  PHPZPPCheckerImpl(PHPTypeMap map);
+  PHPZPPCheckerImpl(const PHPTypeMap map);
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
 };
 
+// This template is kept minimal on purpose. The goal is to inject the modifier
+// map into the actual implementation. Long term goal is to automatially detect
+// the PHP version we are runnig with ut apparently checkers currently have no
+// access to the preprocessor so we can't read PHP_VERSION_ID and would have to
+// guess based on excistence of functions or similar. Medium term goal might be
+// to add a checker-specific command line argument to pass the PHP version 
+// instead of registering different checkers. This might be useful once we have
+// different checkers.
 template <typename Version>
 class PHPZPPChecker : public Checker<check::PreCall> {
   const PHPZPPCheckerImpl impl;
@@ -119,9 +135,11 @@ public:
   }
 };
 
-} // end anonymous namespace
+}
 
-PHPZPPCheckerImpl::PHPZPPCheckerImpl(PHPTypeMap map)
+
+
+PHPZPPCheckerImpl::PHPZPPCheckerImpl(const PHPTypeMap map)
     : IIzpp(0), IIzpp_ex(0), IIzpmp(0), IIzpmp_ex(0), TSRMBuild(false),
       map(map) {
   InvalidTypeBugType.reset(new BugType("Invalid type", "PHP ZPP API Error"));
@@ -130,8 +148,7 @@ PHPZPPCheckerImpl::PHPZPPCheckerImpl(PHPTypeMap map)
       new BugType("Wrong number of zpp arguments", "PHP ZPP API Error"));
 }
 
-const StringLiteral *PHPZPPCheckerImpl::getCStringLiteral(CheckerContext &C,
-                                                          SVal val) const {
+const StringLiteral *PHPZPPCheckerImpl::getCStringLiteral(const SVal val) const {
 
   // Copied from tools/clang/lib/StaticAnalyzer/Checkers/CStringChecker.cpp
 
@@ -152,13 +169,13 @@ const StringLiteral *PHPZPPCheckerImpl::getCStringLiteral(CheckerContext &C,
   return strRegion->getStringLiteral();
 }
 
-const QualType PHPZPPCheckerImpl::getTypeForSVal(SVal val) const {
+const QualType PHPZPPCheckerImpl::getTypeForSVal(const SVal val) const {
   const TypedValueRegion *TR =
       dyn_cast_or_null<TypedValueRegion>(val.getAsRegion());
   return TR->getLocationType().getCanonicalType();
 }
 
-bool PHPZPPCheckerImpl::compareTypeWithSVal(SVal val,
+bool PHPZPPCheckerImpl::compareTypeWithSVal(const SVal val,
                                             const std::string &expectedType,
                                             CheckerContext &C) const {
   if (expectedType != getTypeForSVal(val).getAsString()) {
@@ -206,22 +223,21 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
     return;
 
   const StringLiteral *format_spec_sl =
-      getCStringLiteral(C, Call.getArgSVal(offset));
+      getCStringLiteral(Call.getArgSVal(offset));
   if (!format_spec_sl) {
     // TODO need a good way to report this, even though this is no error
     std::cout << "Couldn't get format string looked at offset " << offset << std::endl;
     Call.dump();
     return;
   }
-  StringRef format_spec = format_spec_sl->getBytes();
+  const StringRef format_spec = format_spec_sl->getBytes();
 
-  ++offset;
-
+//Call.dump();
   for (StringRef::const_iterator it = format_spec.begin();
        it != format_spec.end(); ++it) {
-
-    PHPTypeRange range = map.equal_range(*it);
-    for (PHPTypeMap::iterator iit = range.first; iit != range.second;
+//std::cout << "  I am checking for " << *it << std::endl;
+    const PHPTypeRange range = map.equal_range(*it);
+    for (PHPTypeMap::const_iterator iit = range.first; iit != range.second;
          ++iit) {
       if (!iit->second) {
         // Current modifier doesn't need an arguement, these are special things
@@ -229,11 +245,13 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
         continue;
       }
       ++offset;
+//std::cout << "    I need a " << *iit->second << " (" << offset << ")" << std::endl;
       if (Call.getNumArgs() <= offset) {
         BugReport *R = new BugReport(*WrongArgumentNumberBugType,
                                      "Too few arguments for format specified",
                                      C.addTransition());
         C.emitReport(R);
+//std::cout << "!!!!I am missing args! " << Call.getNumArgs() << "<=" << offset << std::endl;
         return;
       }
 
@@ -244,7 +262,7 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
     }
   }
 
-  if (Call.getNumArgs() > offset) {
+  if (Call.getNumArgs() > 1 + offset) {
     BugReport *R = new BugReport(*WrongArgumentNumberBugType,
                                  "Too many arguments for format specified",
                                  C.addTransition());
@@ -265,6 +283,9 @@ void PHPZPPCheckerImpl::initIdentifierInfo(ASTContext &Ctx) const {
   IdentifierInfo *tsrm = &Ctx.Idents.get("ZTS");
   TSRMBuild = tsrm->hasMacroDefinition();
 }
+
+
+
 
 extern "C" void clang_registerCheckers(CheckerRegistry &registry) {
   registry.addChecker<PHPZPPChecker<PHP55> >(
