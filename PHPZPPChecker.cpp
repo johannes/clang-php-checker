@@ -1,4 +1,4 @@
-//===-- PHPZPPChecker.cpp -----------------------------------------*- C++ -*--//
+//===-- PHPZPPCheckerImpl.cpp ---------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -76,13 +76,16 @@ BEGIN_MAP(PHP55) {
 }
 END_MAPPING()
 
-class PHPZPPChecker : public Checker<check::PreCall> {
+class PHPZPPCheckerImpl {
   mutable IdentifierInfo *IIzpp, *IIzpp_ex, *IIzpmp, *IIzpmp_ex;
 
   OwningPtr<BugType> InvalidTypeBugType;
   OwningPtr<BugType> WrongArgumentNumberBugType;
 
   mutable bool TSRMBuild;
+
+  // TODO: This could be made non-mutable
+  mutable PHPTypeMap map;
 
   void initIdentifierInfo(ASTContext &Ctx) const;
 
@@ -93,23 +96,35 @@ class PHPZPPChecker : public Checker<check::PreCall> {
   void check(SVal val, char modifier) const;
 
 public:
-  PHPZPPChecker();
+  PHPZPPCheckerImpl(PHPTypeMap map);
 
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
 };
 
+template <typename Version>
+class PHPZPPChecker : public Checker<check::PreCall> {
+  const PHPZPPCheckerImpl impl;
+
+public:
+  PHPZPPChecker() : impl(getMap<Version>()) {}
+  void checkPreCall(const CallEvent &Call, CheckerContext &C) const {
+    impl.checkPreCall(Call, C);
+  }
+};
+
 } // end anonymous namespace
 
-PHPZPPChecker::PHPZPPChecker()
-    : IIzpp(0), IIzpp_ex(0), IIzpmp(0), IIzpmp_ex(0), TSRMBuild(false) {
+PHPZPPCheckerImpl::PHPZPPCheckerImpl(PHPTypeMap map)
+    : IIzpp(0), IIzpp_ex(0), IIzpmp(0), IIzpmp_ex(0), TSRMBuild(false),
+      map(map) {
   InvalidTypeBugType.reset(new BugType("Invalid type", "PHP ZPP API Error"));
 
   WrongArgumentNumberBugType.reset(
       new BugType("Wrong number of zpp arguments", "PHP ZPP API Error"));
 }
 
-const StringLiteral *PHPZPPChecker::getCStringLiteral(CheckerContext &C,
-                                                      SVal val) const {
+const StringLiteral *PHPZPPCheckerImpl::getCStringLiteral(CheckerContext &C,
+                                                          SVal val) const {
 
   // Copied from tools/clang/lib/StaticAnalyzer/Checkers/CStringChecker.cpp
 
@@ -130,15 +145,15 @@ const StringLiteral *PHPZPPChecker::getCStringLiteral(CheckerContext &C,
   return strRegion->getStringLiteral();
 }
 
-const QualType PHPZPPChecker::getTypeForSVal(SVal val) const {
+const QualType PHPZPPCheckerImpl::getTypeForSVal(SVal val) const {
   const TypedValueRegion *TR =
       dyn_cast_or_null<TypedValueRegion>(val.getAsRegion());
   return TR->getLocationType().getCanonicalType();
 }
 
-bool PHPZPPChecker::compareTypeWithSVal(SVal val,
-                                        const std::string &expectedType,
-                                        CheckerContext &C) const {
+bool PHPZPPCheckerImpl::compareTypeWithSVal(SVal val,
+                                            const std::string &expectedType,
+                                            CheckerContext &C) const {
   if (expectedType != getTypeForSVal(val).getAsString()) {
     BugReport *R = new BugReport(
         *InvalidTypeBugType,
@@ -154,8 +169,8 @@ bool PHPZPPChecker::compareTypeWithSVal(SVal val,
   return true;
 }
 
-void PHPZPPChecker::checkPreCall(const CallEvent &Call,
-                                 CheckerContext &C) const {
+void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
+                                     CheckerContext &C) const {
   initIdentifierInfo(C.getASTContext());
 
   unsigned offset;
@@ -192,7 +207,6 @@ void PHPZPPChecker::checkPreCall(const CallEvent &Call,
   }
   StringRef format_spec = format_spec_sl->getBytes();
 
-  PHPTypeMap map = getMap<PHP55>();
   ++offset;
 
   for (StringRef::const_iterator it = format_spec.begin();
@@ -203,7 +217,7 @@ void PHPZPPChecker::checkPreCall(const CallEvent &Call,
          ++iit, ++offset) {
       if (!iit->second) {
         // Current modifier doesn't need an argument, these are special things
-	// like |, ! or /
+        // like |, ! or /
         continue;
       }
       if (Call.getNumArgs() <= offset) {
@@ -230,7 +244,7 @@ void PHPZPPChecker::checkPreCall(const CallEvent &Call,
   }
 }
 
-void PHPZPPChecker::initIdentifierInfo(ASTContext &Ctx) const {
+void PHPZPPCheckerImpl::initIdentifierInfo(ASTContext &Ctx) const {
   if (IIzpp)
     return;
 
@@ -244,8 +258,8 @@ void PHPZPPChecker::initIdentifierInfo(ASTContext &Ctx) const {
 }
 
 extern "C" void clang_registerCheckers(CheckerRegistry &registry) {
-  registry.addChecker<PHPZPPChecker>(
-      "php.PHPZPPChecker55",
+  registry.addChecker<PHPZPPChecker<PHP55> >(
+      "php.PHPZPPCheckerImpl55",
       "Check zend_parse_parameter usage for PHP 5.3 - 5.5");
 }
 
