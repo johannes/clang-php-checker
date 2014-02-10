@@ -1,1 +1,65 @@
-make -C tools/clang/tools/php-checker
+PHP Plugin for clang's static analyzer
+
+About clang:
+  Clang /ˈklæŋ/ is a compiler front end for the C, C++, Objective-C and
+  Objective-C++ programming languages. It uses LLVM as its back end and has
+  been part of its releases since LLVM 2.6.
+  http://en.wikipedia.org/wiki/Clang
+
+About clang's static analyzer:
+  The Clang Static Analyzer is a source code analysis tool that finds bugs
+  in C, C++, and Objective-C programs.
+  http://clang-analyzer.llvm.org/
+
+About this project:
+  PHP uses a family of variadic functions like zend_parse_parameters(), or
+  zpp in short, to retrieve arguements from PHP userland into C variables.
+  Due to the variadic nature ofthis funtion the compiler can't check the
+  type of the C variable. This plugin enriches the Clang Static Analyzer
+  with a capaility to check it.
+
+Installation:
+  A simple Makefile is provided. A "proper" build system would be accepted.
+  Prerequirement is an installation of Clang, including headers and the
+  llvm-config tool. If llvm-config and clang are in the PATH a simple `make`
+  should compile the plugin. If llvm-config is not in PATH the environment
+  variable LLVM_CONFIG can be set accordingly. CXX and CXXFLAGS are observed
+  to set custom compiler options.
+  A make install target currently does not exist.
+
+Usage:
+  To check a simple file one has to load the plugin and activate the checker
+  this might look like this:
+   $ clang -cc1 \
+           -fcolor-diagnostics \
+           -analyze \
+           -analyzer-checker=php.ZPPChecker55 \
+           -load=/path/to/PHPChecker.so \
+           source_fileto_check.c
+  Note: The -cc1 frontend doesn't include system headers and such by default.
+  For more than simple test files this might not be useful. A call like
+   $ clang -Xclang -fcolor-diagnostics \
+           -Xclang -analyze \
+           -Xclang -analyzer-checker=php.ZPPChecker55 \
+           -Xclang -load=/path/to/PHPChecker.so \
+           source_fileto_check.c
+  might be more helpful. This frontend behaves like gcc, clang-specific
+  options have to be prefixed with -Xclang. See clang documentation for
+  details.
+
+  For testing a complete build including a HTML report Clang Analyzer provides
+  a set of helper scripts. PHP can be compiled using them in such a manner:
+   $ scan-build --use-analyzer=/path/to/bin/clang \
+                ./configure --enable-php-features-as-usual
+   $ scan-build --use-analyzer=/path/to/bin/clang \
+                -load-plugin /path/to/PHPChecker.so \
+                -enable-checker php.ZPPChecker55 \
+                make
+ So first we configure PHP, usin the wrapper script ensures tosetup the proper
+ compiler but we don't want to run all checks during confiure phase. After that
+ we enableall tests.
+
+Licensing:
+  Currently University of Illinois Open Source License is being used. Eventually
+  the code might be relicensed under PHP License 3.01 at a later stage.
+
