@@ -271,6 +271,10 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
       SVal val = Call.getArgSVal(offset);
       if (!compareTypeWithSVal(val, *iit->second, C)) {
         // TODO: Move error reporting here?
+
+        // Even if there is a type mismatch we can continue, most of the time
+        // this should be a simple mistake by the user, in rare cases the user
+        // missed an argument and will get many subsequent errors
       }
     }
   }
