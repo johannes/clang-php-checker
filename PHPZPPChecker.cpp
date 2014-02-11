@@ -97,6 +97,7 @@ class PHPZPPCheckerImpl {
   mutable IdentifierInfo *IIzpp, *IIzpp_ex, *IIzpmp, *IIzpmp_ex;
 
   OwningPtr<BugType> InvalidTypeBugType;
+  OwningPtr<BugType> InvalidModifierBugType;
   OwningPtr<BugType> WrongArgumentNumberBugType;
 
   mutable bool TSRMBuild;
@@ -143,6 +144,9 @@ PHPZPPCheckerImpl::PHPZPPCheckerImpl(const PHPTypeMap map)
     : IIzpp(0), IIzpp_ex(0), IIzpmp(0), IIzpmp_ex(0), TSRMBuild(false),
       map(map) {
   InvalidTypeBugType.reset(new BugType("Invalid type", "PHP ZPP API Error"));
+
+  InvalidModifierBugType.reset(
+      new BugType("Invalid modifier", "PHP ZPP API Error"));
 
   WrongArgumentNumberBugType.reset(
       new BugType("Wrong number of zpp arguments", "PHP ZPP API Error"));
@@ -237,6 +241,15 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
        it != format_spec.end(); ++it) {
 //std::cout << "  I am checking for " << *it << std::endl;
     const PHPTypeRange range = map.equal_range(*it);
+
+    if (range.first == range.second) {
+      BugReport *R = new BugReport(
+          *InvalidModifierBugType,
+          std::string("Unknown modifier '") + *it + "'", C.addTransition());
+      C.emitReport(R);
+      return;
+    }
+
     for (PHPTypeMap::const_iterator iit = range.first; iit != range.second;
          ++iit) {
       if (!iit->second) {
