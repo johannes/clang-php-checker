@@ -236,29 +236,30 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
   }
   const StringRef format_spec = format_spec_sl->getBytes();
 
-//Call.dump();
-  for (StringRef::const_iterator it = format_spec.begin();
-       it != format_spec.end(); ++it) {
-//std::cout << "  I am checking for " << *it << std::endl;
-    const PHPTypeRange range = map.equal_range(*it);
+  // Call.dump();
+  for (StringRef::const_iterator modifier = format_spec.begin(),
+                                 last_mod = format_spec.end();
+       modifier != last_mod; ++modifier) {
+//std::cout << "  I am checking for " << *modifier << std::endl;
+    const PHPTypeRange range = map.equal_range(*modifier);
 
     if (range.first == range.second) {
       BugReport *R = new BugReport(
           *InvalidModifierBugType,
-          std::string("Unknown modifier '") + *it + "'", C.addTransition());
+          std::string("Unknown modifier '") + *modifier + "'", C.addTransition());
       C.emitReport(R);
       return;
     }
 
-    for (PHPTypeMap::const_iterator iit = range.first; iit != range.second;
-         ++iit) {
-      if (!iit->second) {
+    for (PHPTypeMap::const_iterator type = range.first; type != range.second;
+         ++type) {
+      if (!type->second) {
         // Current modifier doesn't need an argument, these are special things
         // like |, ! or /
         continue;
       }
       ++offset;
-//std::cout << "    I need a " << *iit->second << " (" << offset << ")" << std::endl;
+//std::cout << "    I need a " << *type->second << " (" << offset << ")" << std::endl;
       if (Call.getNumArgs() <= offset) {
         BugReport *R = new BugReport(*WrongArgumentNumberBugType,
                                      "Too few arguments for format specified",
@@ -269,7 +270,7 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
       }
 
       SVal val = Call.getArgSVal(offset);
-      if (!compareTypeWithSVal(val, *iit->second, C)) {
+      if (!compareTypeWithSVal(val, *type->second, C)) {
         // TODO: Move error reporting here?
 
         // Even if there is a type mismatch we can continue, most of the time
