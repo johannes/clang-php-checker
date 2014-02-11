@@ -253,7 +253,7 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
     for (PHPTypeMap::const_iterator iit = range.first; iit != range.second;
          ++iit) {
       if (!iit->second) {
-        // Current modifier doesn't need an arguement, these are special things
+        // Current modifier doesn't need an argument, these are special things
         // like |, ! or /
         continue;
       }
