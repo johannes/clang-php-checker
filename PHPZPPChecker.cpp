@@ -206,13 +206,14 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
   if (!Call.isGlobalCFunction())
     return;
 
-  if (Call.getCalleeIdentifier() == IIzpp) {
+  const IdentifierInfo *callee = Call.getCalleeIdentifier();
+  if (callee == IIzpp) {
     offset = 1;
   } else if (Call.getCalleeIdentifier() == IIzpp_ex) {
     offset = 2;
-  } else if (Call.getCalleeIdentifier() == IIzpmp) {
+  } else if (callee == IIzpmp) {
     offset = 2;
-  } else if (Call.getCalleeIdentifier() == IIzpmp_ex) {
+  } else if (callee == IIzpmp_ex) {
     offset = 3;
   } else {
     return;
@@ -222,7 +223,8 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
     ++offset;
   }
 
-  if (Call.getNumArgs() <= offset)
+  const unsigned numArgs = Call.getNumArgs();
+  if (numArgs <= offset)
     // Something is really weird - this should be caught by the compiler
     return;
 
@@ -260,12 +262,12 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
       }
       ++offset;
 //std::cout << "    I need a " << *type->second << " (" << offset << ")" << std::endl;
-      if (Call.getNumArgs() <= offset) {
-        BugReport *R = new BugReport(*WrongArgumentNumberBugType,
+      if (numArgs <= offset) {
+        ugReport *R = new BugReport(*WrongArgumentNumberBugType,
                                      "Too few arguments for format specified",
                                      C.addTransition());
         C.emitReport(R);
-//std::cout << "!!!!I am missing args! " << Call.getNumArgs() << "<=" << offset << std::endl;
+//std::cout << "!!!!I am missing args! " << numArgs << "<=" << offset << std::endl;
         return;
       }
 
@@ -280,7 +282,7 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
     }
   }
 
-  if (Call.getNumArgs() > 1 + offset) {
+  if (numArgs > 1 + offset) {
     BugReport *R = new BugReport(*WrongArgumentNumberBugType,
                                  "Too many arguments for format specified",
                                  C.addTransition());
