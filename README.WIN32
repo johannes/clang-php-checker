@@ -1,3 +1,5 @@
 The way it currently works is putting this folder under llvm/tools/clang/tools.
 The file llvm/tools/clang/tools/CMakeList.txt has to be patched to add 
-the checker subdir to the build.
+the checker subdir to the build. After that, regenerate the VS projects with
+cmake and you'll see the clangPHPChecker project which can be then compiled
+among others.
