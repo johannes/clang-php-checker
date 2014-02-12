@@ -209,7 +209,7 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
   const IdentifierInfo *callee = Call.getCalleeIdentifier();
   if (callee == IIzpp) {
     offset = 1;
-  } else if (Call.getCalleeIdentifier() == IIzpp_ex) {
+  } else if (callee == IIzpp_ex) {
     offset = 2;
   } else if (callee == IIzpmp) {
     offset = 2;
@@ -263,7 +263,7 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
       ++offset;
 //std::cout << "    I need a " << *type->second << " (" << offset << ")" << std::endl;
       if (numArgs <= offset) {
-        ugReport *R = new BugReport(*WrongArgumentNumberBugType,
+        BugReport *R = new BugReport(*WrongArgumentNumberBugType,
                                      "Too few arguments for format specified",
                                      C.addTransition());
         C.emitReport(R);
