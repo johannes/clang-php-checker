@@ -21,6 +21,16 @@
 
 #include <iostream>
 
+#if defined (_WIN32) 
+  #if defined(clangphpchecker_EXPORTS)
+    #define  CLANGPHPCHECKER_EXPORT __declspec(dllexport)
+  #else
+    #define  CLANGPHPCHECKER_EXPORT __declspec(dllimport)
+  #endif /* MyLibrary_EXPORTS */
+#else /* defined (_WIN32) */
+ #define CLANGPHPCHECKER_EXPORT
+#endif
+
 using namespace clang;
 using namespace ento;
 
@@ -305,7 +315,7 @@ void PHPZPPCheckerImpl::initIdentifierInfo(ASTContext &Ctx) const {
 
 
 
-extern "C" void clang_registerCheckers(CheckerRegistry &registry) {
+extern "C" CLANGPHPCHECKER_EXPORT void clang_registerCheckers(CheckerRegistry &registry) {
   registry.addChecker<PHPZPPChecker<PHP55> >(
       "php.ZPPChecker55",
       "Check zend_parse_parameter usage for PHP 5.3 - 5.5");
@@ -314,5 +324,5 @@ extern "C" void clang_registerCheckers(CheckerRegistry &registry) {
       "This is a sample, to be replaced with size_t version");
 }
 
-extern "C" const char clang_analyzerAPIVersionString[] =
+extern "C" CLANGPHPCHECKER_EXPORT const char clang_analyzerAPIVersionString[] =
     CLANG_ANALYZER_API_VERSION_STRING;
