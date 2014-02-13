@@ -246,41 +246,23 @@ bool PHPZPPCheckerImpl::checkArgs(const StringRef &format_spec,
   return true;
 }
 
-// regularArgCount contains the number of arguments we expect, in TSRM mode
-// there is one more,thus the +1
-bool isTSRMBuild(unsigned regularArgCount, const CallEvent &Call) {
-  const FunctionDecl *decl = cast<FunctionDecl>(Call.getDecl());
-  assert(regularArgCount == decl->getMinRequiredArguments() ||
-         regularArgCount + 1 == decl->getMinRequiredArguments());
-  return regularArgCount + 1 == decl->getMinRequiredArguments();
-}
-
 void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
                                      CheckerContext &C) const {
   initIdentifierInfo(C.getASTContext());
-
-  unsigned offset;
 
   if (!Call.isGlobalCFunction())
     return;
 
   const IdentifierInfo *callee = Call.getCalleeIdentifier();
-  if (callee == IIzpp) {
-    offset = 1;
-  } else if (callee == IIzpp_ex) {
-    offset = 2;
-  } else if (callee == IIzpmp) {
-    offset = 2;
-  } else if (callee == IIzpmp_ex) {
-    offset = 3;
-  } else {
+  if (callee != IIzpp && callee && IIzpp_ex && callee != IIzpmp &&
+      callee != IIzpmp_ex) {
     return;
   }
 
-  // +1 as offset is 0-based
-  if (isTSRMBuild(offset + 1, Call)) {
-    ++offset;
-  }
+  const FunctionDecl *decl = cast<FunctionDecl>(Call.getDecl());
+  // we want the offset to be the last required argument which is the format
+  // string, offset is 0-based, thus -1
+  unsigned offset = decl->getMinRequiredArguments() - 1;
 
   const unsigned numArgs = Call.getNumArgs();
   if (numArgs <= offset)
