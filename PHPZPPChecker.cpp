@@ -100,8 +100,6 @@ class PHPZPPCheckerImpl {
   OwningPtr<BugType> InvalidModifierBugType;
   OwningPtr<BugType> WrongArgumentNumberBugType;
 
-  mutable bool TSRMBuild;
-
   const PHPTypeMap map;
 
   void initIdentifierInfo(ASTContext &Ctx) const;
@@ -141,11 +139,8 @@ public:
 
 }
 
-
-
 PHPZPPCheckerImpl::PHPZPPCheckerImpl(const PHPTypeMap map)
-    : IIzpp(0), IIzpp_ex(0), IIzpmp(0), IIzpmp_ex(0), TSRMBuild(false),
-      map(map) {
+    : IIzpp(0), IIzpp_ex(0), IIzpmp(0), IIzpmp_ex(0), map(map) {
   InvalidTypeBugType.reset(new BugType("Invalid type", "PHP ZPP API Error"));
 
   InvalidModifierBugType.reset(
@@ -251,6 +246,15 @@ bool PHPZPPCheckerImpl::checkArgs(const StringRef &format_spec,
   return true;
 }
 
+// regularArgCount contains the number of arguments we expect, in TSRM mode
+// there is one more,thus the +1
+bool isTSRMBuild(unsigned regularArgCount, const CallEvent &Call) {
+  const FunctionDecl *decl = cast<FunctionDecl>(Call.getDecl());
+  assert(regularArgCount == decl->getMinRequiredArguments() ||
+         regularArgCount + 1 == decl->getMinRequiredArguments());
+  return regularArgCount + 1 == decl->getMinRequiredArguments();
+}
+
 void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
                                      CheckerContext &C) const {
   initIdentifierInfo(C.getASTContext());
@@ -273,7 +277,8 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
     return;
   }
 
-  if (TSRMBuild) {
+  // +1 as offset is 0-based
+  if (isTSRMBuild(offset + 1, Call)) {
     ++offset;
   }
 
@@ -312,9 +317,6 @@ void PHPZPPCheckerImpl::initIdentifierInfo(ASTContext &Ctx) const {
   IIzpp_ex = &Ctx.Idents.get("zend_parse_parameters_ex");
   IIzpmp = &Ctx.Idents.get("zend_parse_method_parameters");
   IIzpmp_ex = &Ctx.Idents.get("zend_parse_method_parameters_ex");
-
-  IdentifierInfo *tsrm = &Ctx.Idents.get("ZTS");
-  TSRMBuild = tsrm->hasMacroDefinition();
 }
 
 
