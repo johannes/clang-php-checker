@@ -1,4 +1,4 @@
-//===-- PHPZPPCheckerImpl.cpp ---------------------------------------------===//
+//===-- PHPZPPChecker.cpp -------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
