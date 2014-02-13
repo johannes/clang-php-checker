@@ -237,7 +237,7 @@ bool PHPZPPCheckerImpl::checkArgs(const StringRef &format_spec,
         return false;
       }
 
-      SVal val = Call.getArgSVal(offset);
+      const SVal val = Call.getArgSVal(offset);
       if (!compareTypeWithSVal(val, *type->second, C)) {
         // TODO: Move error reporting here?
 
