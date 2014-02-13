@@ -110,6 +110,9 @@ class PHPZPPCheckerImpl {
   const QualType getTypeForSVal(const SVal val) const;
   bool compareTypeWithSVal(const SVal val, const std::string &expectedType,
                            CheckerContext &C) const;
+  bool checkArgs(const StringRef &format_spec, unsigned &offset,
+                 const unsigned numArgs, const CallEvent &Call,
+                 CheckerContext &C) const;
 
 public:
   PHPZPPCheckerImpl(const PHPTypeMap map);
@@ -197,6 +200,57 @@ bool PHPZPPCheckerImpl::compareTypeWithSVal(const SVal val,
   return true;
 }
 
+bool PHPZPPCheckerImpl::checkArgs(const StringRef &format_spec,
+                                  unsigned &offset, const unsigned numArgs,
+                                  const CallEvent &Call,
+                                  CheckerContext &C) const {
+  // Call.dump();
+  for (StringRef::const_iterator modifier = format_spec.begin(),
+                                 last_mod = format_spec.end();
+       modifier != last_mod; ++modifier) {
+//std::cout << "  I am checking for " << *modifier << std::endl;
+    const PHPTypeRange range = map.equal_range(*modifier);
+
+    if (range.first == range.second) {
+      BugReport *R = new BugReport(
+          *InvalidModifierBugType,
+          std::string("Unknown modifier '") + *modifier + "'", C.addTransition());
+      C.emitReport(R);
+      return false;
+    }
+
+    for (PHPTypeMap::const_iterator type = range.first; type != range.second;
+         ++type) {
+      if (!type->second) {
+        // Current modifier doesn't need an argument, these are special things
+        // like |, ! or /
+        continue;
+      }
+      ++offset;
+//std::cout << "    I need a " << *type->second << " (" << offset << ")" << std::endl;
+      if (numArgs <= offset) {
+        BugReport *R = new BugReport(*WrongArgumentNumberBugType,
+                                     "Too few arguments for format specified",
+                                     C.addTransition());
+        C.emitReport(R);
+//std::cout << "!!!!I am missing args! " << numArgs << "<=" << offset << std::endl;
+        return false;
+      }
+
+      SVal val = Call.getArgSVal(offset);
+      if (!compareTypeWithSVal(val, *type->second, C)) {
+        // TODO: Move error reporting here?
+
+        // Even if there is a type mismatch we can continue, most of the time
+        // this should be a simple mistake by the user, in rare cases the user
+        // missed an argument and will get many subsequent errors
+      }
+
+    }
+  }
+  return true;
+}
+
 void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
                                      CheckerContext &C) const {
   initIdentifierInfo(C.getASTContext());
@@ -238,49 +292,8 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
   }
   const StringRef format_spec = format_spec_sl->getBytes();
 
-  // Call.dump();
-  for (StringRef::const_iterator modifier = format_spec.begin(),
-                                 last_mod = format_spec.end();
-       modifier != last_mod; ++modifier) {
-//std::cout << "  I am checking for " << *modifier << std::endl;
-    const PHPTypeRange range = map.equal_range(*modifier);
-
-    if (range.first == range.second) {
-      BugReport *R = new BugReport(
-          *InvalidModifierBugType,
-          std::string("Unknown modifier '") + *modifier + "'", C.addTransition());
-      C.emitReport(R);
-      return;
-    }
-
-    for (PHPTypeMap::const_iterator type = range.first; type != range.second;
-         ++type) {
-      if (!type->second) {
-        // Current modifier doesn't need an argument, these are special things
-        // like |, ! or /
-        continue;
-      }
-      ++offset;
-//std::cout << "    I need a " << *type->second << " (" << offset << ")" << std::endl;
-      if (numArgs <= offset) {
-        BugReport *R = new BugReport(*WrongArgumentNumberBugType,
-                                     "Too few arguments for format specified",
-                                     C.addTransition());
-        C.emitReport(R);
-//std::cout << "!!!!I am missing args! " << numArgs << "<=" << offset << std::endl;
-        return;
-      }
-
-      SVal val = Call.getArgSVal(offset);
-      if (!compareTypeWithSVal(val, *type->second, C)) {
-        // TODO: Move error reporting here?
-
-        // Even if there is a type mismatch we can continue, most of the time
-        // this should be a simple mistake by the user, in rare cases the user
-        // missed an argument and will get many subsequent errors
-      }
-    }
-  }
+  if (!checkArgs(format_spec, offset, numArgs, Call, C))
+    return;
 
   if (numArgs > 1 + offset) {
     BugReport *R = new BugReport(*WrongArgumentNumberBugType,
