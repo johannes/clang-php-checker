@@ -29,21 +29,23 @@ typedef std::multimap<char, const PHPNativeType> PHPTypeMap;
 typedef std::pair<const PHPTypeMap::const_iterator, const PHPTypeMap::const_iterator> PHPTypeRange;
 
 #define BEGIN_MAP(versionname)                                                 \
-  struct versionname;                                                          \
-  template <> const PHPTypeMap getMap<versionname>() {                         \
-    PHPTypeMap retval;
+  struct versionname {                                                         \
+    static const PHPTypeMap getMap() {                                         \
+      PHPTypeMap retval;
 
 #define MAPPING(format, type)                                                  \
-  retval.insert(std::pair<char, const PHPNativeType>((format), std::string(type)))
+  retval.insert(std::pair<char, const PHPNativeType>((format),                 \
+                                                     std::string(type)))
 #define MAPPING_EMPTY(format)                                                  \
-  retval.insert(std::pair<char, const PHPNativeType>((format), PHPNativeType()));
+  retval.insert(                                                               \
+      std::pair<char, const PHPNativeType>((format), PHPNativeType()));
+
 #define END_MAPPING()                                                          \
   return retval;                                                               \
+  }                                                                            \
   }
 
 namespace {
-template <typename T> const PHPTypeMap getMap() {}
-
 // These mappings map a zpp modifier to underlying types. Mind that we
 // reference the canonical form here, thus HashTable becomes struct _hashtable.
 // Also mind the indirection level: zpp receives the address of the object to
@@ -82,7 +84,7 @@ BEGIN_MAP(PHP55) {
   MAPPING('*', "struct _zval_struct ****");
   MAPPING('*', "int *");
 }
-END_MAPPING()
+END_MAPPING();
 
 // TODO: This is a sample, please replace it if you add support for a new
 // PHP version
@@ -90,7 +92,7 @@ BEGIN_MAP(PHPSample) {
   MAPPING('a', "struct _zval_struct **");
   MAPPING('A', "struct _zval_struct **");
 }
-END_MAPPING()
+END_MAPPING();
 
 
 class PHPZPPCheckerImpl {
@@ -131,7 +133,7 @@ class PHPZPPChecker : public Checker<check::PreCall> {
   const PHPZPPCheckerImpl impl;
 
 public:
-  PHPZPPChecker() : impl(getMap<Version>()) {}
+  PHPZPPChecker() : impl(Version::getMap()) {}
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const {
     impl.checkPreCall(Call, C);
   }
