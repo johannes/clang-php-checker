@@ -108,7 +108,7 @@ class PHPZPPCheckerImpl {
 
   const StringLiteral *getCStringLiteral(const SVal val) const;
   const QualType getTypeForSVal(const SVal val) const;
-  bool compareTypeWithSVal(const SVal val, const std::string &expectedType,
+  bool compareTypeWithSVal(unsigned offset, char modifier, const SVal val, const std::string &expectedType,
                            CheckerContext &C) const;
   bool checkArgs(const StringRef &format_spec, unsigned &offset,
                  const unsigned numArgs, const CallEvent &Call,
@@ -179,17 +179,16 @@ const QualType PHPZPPCheckerImpl::getTypeForSVal(const SVal val) const {
   return TR->getLocationType().getCanonicalType();
 }
 
-bool PHPZPPCheckerImpl::compareTypeWithSVal(const SVal val,
+bool PHPZPPCheckerImpl::compareTypeWithSVal(unsigned offset, char modifier, const SVal val,
                                             const std::string &expectedType,
                                             CheckerContext &C) const {
   if (expectedType != getTypeForSVal(val).getAsString()) {
-    BugReport *R = new BugReport(
-        *InvalidTypeBugType,
-        std::string("Arguments don't match the type expected by the format "
-                    "string (") +
-            expectedType + std::string(" != ") +
-            getTypeForSVal(val).getAsString() + std::string(")"),
-        C.addTransition());
+    SmallString<256> buf;
+    llvm::raw_svector_ostream os(buf);
+    os << "Type of passed argument " << getTypeForSVal(val).getAsString()
+       << " did not match expected " << expectedType << " for modifier '"
+       << modifier << "' at offset " << offset + 1 << ".";
+    BugReport *R = new BugReport(*InvalidTypeBugType, os.str(), C.addTransition());
     R->markInteresting(val);
     C.emitReport(R);
     return false;
@@ -235,7 +234,7 @@ bool PHPZPPCheckerImpl::checkArgs(const StringRef &format_spec,
       }
 
       const SVal val = Call.getArgSVal(offset);
-      if (!compareTypeWithSVal(val, *type->second, C)) {
+      if (!compareTypeWithSVal(offset, *modifier, val, *type->second, C)) {
         // TODO: Move error reporting here?
 
         // Even if there is a type mismatch we can continue, most of the time
