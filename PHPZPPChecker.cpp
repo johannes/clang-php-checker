@@ -150,7 +150,10 @@ static const QualType getQualTypeForSVal(const SVal &val) {
   if (isa<TypedValueRegion>(region)) {
     return cast<TypedValueRegion>(region)->getLocationType().getCanonicalType();
   } else if (isa<SymbolicRegion>(region)) {
-    return cast<SymbolicRegion>(region)->getSymbol()->getType().getCanonicalType();
+    return cast<SymbolicRegion>(region)
+        ->getSymbol()
+        ->getType()
+        .getCanonicalType();
   }
   return QualType();
 }
@@ -314,7 +317,8 @@ static void initPHPChecker(CheckerManager &mgr) {
 
 
 extern "C" void clang_registerCheckers(CheckerRegistry &registry) {
-  registry.addChecker(initPHPChecker, "php.ZPPChecker", "Check zend_parse_parameters usage");
+  registry.addChecker(initPHPChecker, "php.ZPPChecker",
+                      "Check zend_parse_parameters usage");
 }
 
 extern "C" const char clang_analyzerAPIVersionString[] =
