@@ -92,7 +92,6 @@ class PHPZPPChecker : public Checker<check::PreCall> {
   void initIdentifierInfo(ASTContext &Ctx) const;
 
   const StringLiteral *getCStringLiteral(const SVal val) const;
-  const QualType getTypeForSVal(const SVal val) const;
   bool compareTypeWithSVal(unsigned offset, char modifier, const SVal val, const std::string &expectedType,
                            CheckerContext &C) const;
   bool checkArgs(const StringRef &format_spec, unsigned &offset,
@@ -146,21 +145,24 @@ const StringLiteral *PHPZPPChecker::getCStringLiteral(const SVal val) const {
   return strRegion->getStringLiteral();
 }
 
-const QualType PHPZPPChecker::getTypeForSVal(const SVal val) const {
-  const TypedValueRegion *TR =
-      dyn_cast_or_null<TypedValueRegion>(val.getAsRegion());
-  return TR->getLocationType().getCanonicalType();
-}
-
 bool PHPZPPChecker::compareTypeWithSVal(unsigned offset, char modifier, const SVal val,
                                             const std::string &expectedType,
                                             CheckerContext &C) const {
-  if (expectedType != getTypeForSVal(val).getAsString()) {
+  const TypedValueRegion *TR =
+      dyn_cast_or_null<TypedValueRegion>(val.getAsRegion());
+  if (!TR) {
+    // TODO need a good way to report this, even though this is no error
+    std::cout << "Couldn't get type for argument at offset " << offset << std::endl;
+    return false;
+  }
+  const QualType type = TR->getLocationType().getCanonicalType();
+
+  if (expectedType != type.getAsString()) {
     SmallString<256> buf;
     llvm::raw_svector_ostream os(buf);
     os << "Type of passed argument ";
-    val.dumpToStreaToStreamm(os);
-    os << " is of type "<< getTypeForSVal(val).getAsString()
+    val.dumpToStream(os);
+    os << " is of type "<< type.getAsString()
        << " which did not match expected " << expectedType << " for modifier '"
        << modifier << "' at offset " << offset + 1 << ".";
     BugReport *R = new BugReport(*InvalidTypeBugType, os.str(), C.addTransition());
