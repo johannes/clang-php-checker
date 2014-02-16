@@ -28,22 +28,10 @@ typedef llvm::Optional<const std::string> PHPNativeType;
 typedef std::multimap<char, const PHPNativeType> PHPTypeMap;
 typedef std::pair<const PHPTypeMap::const_iterator, const PHPTypeMap::const_iterator> PHPTypeRange;
 
-#define BEGIN_MAP(versionname)                                                 \
-  struct versionname {                                                         \
-    static const PHPTypeMap getMap() {                                         \
-      PHPTypeMap retval;
-
 #define MAPPING(format, type)                                                  \
-  retval.insert(std::pair<char, const PHPNativeType>((format),                 \
-                                                     std::string(type)))
+  map.insert(std::pair<char, const PHPNativeType>((format), std::string(type)))
 #define MAPPING_EMPTY(format)                                                  \
-  retval.insert(                                                               \
-      std::pair<char, const PHPNativeType>((format), PHPNativeType()));
-
-#define END_MAPPING()                                                          \
-  return retval;                                                               \
-  }                                                                            \
-  }
+  map.insert(std::pair<char, const PHPNativeType>((format), PHPNativeType()));
 
 namespace {
 // These mappings map a zpp modifier to underlying types. Mind that we
@@ -53,8 +41,8 @@ namespace {
 // Some types return multiple values, these are added multiple times inorder to
 // this list (i.e. a string "s" consists of a char array and length)
 // The identifier (i.e. PHP55) has to ve a valid C++ identifier as we declare a
-// struct using it.
-BEGIN_MAP(PHP55) {
+// function using it.
+static void fillMapPHP55(PHPTypeMap &map) {
   MAPPING('a', "struct _zval_struct **");
   MAPPING('A', "struct _zval_struct **");
   MAPPING('b', "unsigned char *");
@@ -84,16 +72,13 @@ BEGIN_MAP(PHP55) {
   MAPPING('*', "struct _zval_struct ****");
   MAPPING('*', "int *");
 }
-END_MAPPING();
 
 // TODO: This is a sample, please replace it if you add support for a new
 // PHP version
-BEGIN_MAP(PHPSample) {
+static void fillMapPHPSample(PHPTypeMap &map) {
   MAPPING('a', "struct _zval_struct **");
   MAPPING('A', "struct _zval_struct **");
 }
-END_MAPPING();
-
 
 class PHPZPPChecker : public Checker<check::PreCall> {
   mutable IdentifierInfo *IIzpp, *IIzpp_ex, *IIzpmp, *IIzpmp_ex;
@@ -117,7 +102,8 @@ class PHPZPPChecker : public Checker<check::PreCall> {
 public:
   PHPZPPChecker();
 
-  void setMap(const PHPTypeMap map);
+  typedef void (*MapFiller)(PHPTypeMap &);
+  void setMap(MapFiller filler);
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
 };
 
@@ -134,8 +120,9 @@ PHPZPPChecker::PHPZPPChecker()
       new BugType("Wrong number of zpp arguments", "PHP ZPP API Error"));
 }
 
-void PHPZPPChecker::setMap(const PHPTypeMap map) {
-  this->map = map;
+void PHPZPPChecker::setMap(MapFiller filler) {
+  map.clear();
+  filler(map);
 }
 
 const StringLiteral *PHPZPPChecker::getCStringLiteral(const SVal val) const {
@@ -300,10 +287,10 @@ static void initPHPChecker(CheckerManager &mgr) {
   PHPZPPChecker *checker = mgr.registerChecker<PHPZPPChecker>();
   switch (mgr.getAnalyzerOptions().getOptionAsInteger("php-zpp-version", 1)) {
   case 1:
-    checker->setMap(PHP55::getMap());
+    checker->setMap(fillMapPHP55);
     break;
   case 2:
-    checker->setMap(PHPSample::getMap());
+    checker->setMap(fillMapPHPSample);
     break;
   default:
     // TODO: ERROR
