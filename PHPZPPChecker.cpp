@@ -145,17 +145,27 @@ const StringLiteral *PHPZPPChecker::getCStringLiteral(const SVal val) const {
   return strRegion->getStringLiteral();
 }
 
+static const QualType getQualTypeForSVal(const SVal &val) {
+  const MemRegion *region = val.getAsRegion();
+  if (isa<TypedValueRegion>(region)) {
+    return cast<TypedValueRegion>(region)->getLocationType().getCanonicalType();
+  } else if (isa<SymbolicRegion>(region)) {
+    return cast<SymbolicRegion>(region)->getSymbol()->getType().getCanonicalType();
+  }
+  return QualType();
+}
+
 bool PHPZPPChecker::compareTypeWithSVal(unsigned offset, char modifier, const SVal val,
                                             const std::string &expectedType,
                                             CheckerContext &C) const {
-  const TypedValueRegion *TR =
-      dyn_cast_or_null<TypedValueRegion>(val.getAsRegion());
-  if (!TR) {
+  const QualType type = getQualTypeForSVal(val);
+
+  if (type.isNull()) {
     // TODO need a good way to report this, even though this is no error
     std::cout << "Couldn't get type for argument at offset " << offset << std::endl;
+    val.dump();
     return false;
   }
-  const QualType type = TR->getLocationType().getCanonicalType();
 
   if (expectedType != type.getAsString()) {
     SmallString<256> buf;
