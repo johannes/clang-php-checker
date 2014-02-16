@@ -53,7 +53,7 @@ namespace {
 // Some types return multiple values, these are added multiple times inorder to
 // this list (i.e. a string "s" consists of a char array and length)
 // The identifier (i.e. PHP55) has to ve a valid C++ identifier as we declare a
-// struct using it and use it as template parameter type.
+// struct using it.
 BEGIN_MAP(PHP55) {
   MAPPING('a', "struct _zval_struct **");
   MAPPING('A', "struct _zval_struct **");
