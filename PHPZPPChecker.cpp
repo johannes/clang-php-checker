@@ -54,7 +54,7 @@ static void fillMapPHP55(PHPTypeMap &map) {
   MAPPING('H', "struct _hashtable **");
   MAPPING('l', "long *");
   MAPPING('L', "long *");
-  MAPPING('o', "struct _zend_class_entry **");
+  MAPPING('o', "struct _zval_struct **");
   MAPPING('O', "struct _zval_struct **");
   MAPPING('O', "struct _zend_class_entry *");
   MAPPING('p', "char **");
