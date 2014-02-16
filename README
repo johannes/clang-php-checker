@@ -33,8 +33,9 @@ Usage:
    $ clang -cc1 \
            -fcolor-diagnostics \
            -analyze \
-           -analyzer-checker=php.ZPPChecker55 \
+           -analyzer-checker=php.ZPPChecker \
            -load=/path/to/PHPChecker.so \
+	   -analyzer-config php-zpp-version=1 \
            source_fileto_check.c
   Note: The -cc1 frontend doesn't include system headers and such by default.
   For more than simple test files this might not be useful. A call like
@@ -42,6 +43,7 @@ Usage:
            -Xclang -analyze \
            -Xclang -analyzer-checker=php.ZPPChecker55 \
            -Xclang -load=/path/to/PHPChecker.so \
+	   -Xclang -analyzer-config -Xclang php-zpp-version=1 \
            source_fileto_check.c
   might be more helpful. This frontend behaves like gcc, clang-specific
   options have to be prefixed with -Xclang. See clang documentation for
@@ -55,9 +57,10 @@ Usage:
                 -load-plugin /path/to/PHPChecker.so \
                 -enable-checker php.ZPPChecker55 \
                 make
- So first we configure PHP, usin the wrapper script ensures tosetup the proper
- compiler but we don't want to run all checks during confiure phase. After that
- we enableall tests.
+  So first we configure PHP, usin the wrapper script ensures tosetup the proper
+  compiler but we don't want to run all checks during confiure phase. After that
+  we enableall tests.
+  Unfortunately scan-build doesn't allow passing extra options (-analyzer-config)
 
 Licensing:
   Currently University of Illinois Open Source License is being used. Eventually
