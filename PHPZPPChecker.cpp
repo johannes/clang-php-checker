@@ -208,9 +208,11 @@ bool PHPZPPCheckerImpl::checkArgs(const StringRef &format_spec,
     const PHPTypeRange range = map.equal_range(*modifier);
 
     if (range.first == range.second) {
-      BugReport *R = new BugReport(
-          *InvalidModifierBugType,
-          std::string("Unknown modifier '") + *modifier + "'", C.addTransition());
+      SmallString<32> buf;
+      llvm::raw_svector_ostream os(buf);
+      os << "Unknown modifier '" << *modifier << "'";
+      BugReport *R =
+          new BugReport(*InvalidModifierBugType, os.str(), C.addTransition());
       C.emitReport(R);
       return false;
     }
@@ -225,8 +227,11 @@ bool PHPZPPCheckerImpl::checkArgs(const StringRef &format_spec,
       ++offset;
 //std::cout << "    I need a " << *type->second << " (" << offset << ")" << std::endl;
       if (numArgs <= offset) {
-        BugReport *R = new BugReport(*WrongArgumentNumberBugType,
-                                     "Too few arguments for format specified",
+        SmallString<255> buf;
+        llvm::raw_svector_ostream os(buf);
+        os << "Too few arguments for format \"" << format_spec
+           << "\" while checking for modifier '" << *modifier << "'.";
+        BugReport *R = new BugReport(*WrongArgumentNumberBugType, os.str(),
                                      C.addTransition());
         C.emitReport(R);
 //std::cout << "!!!!I am missing args! " << numArgs << "<=" << offset << std::endl;
@@ -284,9 +289,12 @@ void PHPZPPCheckerImpl::checkPreCall(const CallEvent &Call,
     return;
 
   if (numArgs > 1 + offset) {
-    BugReport *R = new BugReport(*WrongArgumentNumberBugType,
-                                 "Too many arguments for format specified",
-                                 C.addTransition());
+    SmallString<32> buf;
+    llvm::raw_svector_ostream os(buf);
+    os << "Too many arguments, modifier \"" << format_spec << "\" requires "
+       << offset - decl->getMinRequiredArguments() + 1 << " arguments.";
+    BugReport *R =
+        new BugReport(*WrongArgumentNumberBugType, os.str(), C.addTransition());
     R->markInteresting(Call.getArgSVal(offset));
     C.emitReport(R);
   }
