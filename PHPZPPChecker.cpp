@@ -55,7 +55,7 @@ static void fillMapPHP55(PHPTypeMap &map) {
   MAPPING('l', "long *");
   MAPPING('L', "long *");
   MAPPING('o', "struct _zend_class_entry **");
-  MAPPING('O', "struct _zend_class_entry **");
+  MAPPING('O', "struct _zval_struct **");
   MAPPING('O', "struct _zend_class_entry *");
   MAPPING('p', "char **");
   MAPPING('p', "int *");
