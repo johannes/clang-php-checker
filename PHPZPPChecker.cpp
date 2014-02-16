@@ -158,8 +158,10 @@ bool PHPZPPChecker::compareTypeWithSVal(unsigned offset, char modifier, const SV
   if (expectedType != getTypeForSVal(val).getAsString()) {
     SmallString<256> buf;
     llvm::raw_svector_ostream os(buf);
-    os << "Type of passed argument " << getTypeForSVal(val).getAsString()
-       << " did not match expected " << expectedType << " for modifier '"
+    os << "Type of passed argument ";
+    val.dumpToStreaToStreamm(os);
+    os << " is of type "<< getTypeForSVal(val).getAsString()
+       << " which did not match expected " << expectedType << " for modifier '"
        << modifier << "' at offset " << offset + 1 << ".";
     BugReport *R = new BugReport(*InvalidTypeBugType, os.str(), C.addTransition());
     R->markInteresting(val);
