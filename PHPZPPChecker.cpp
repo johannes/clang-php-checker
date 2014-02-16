@@ -147,9 +147,17 @@ const StringLiteral *PHPZPPChecker::getCStringLiteral(const SVal val) const {
 
 static const QualType getQualTypeForSVal(const SVal &val) {
   const MemRegion *region = val.getAsRegion();
+  if (!region) {
+    // TODO: pdo_dbh.c uses zpp(0 TSRMLS_CC, "z|z", NULL, NULL) to report an error
+    // Should we report an error for such a construct? In other situations it could be wrong
+    // For this specific case we could mitigate by checking whether the first argument (ht)
+    // is 0 as it is hard coded in this case. Right now we report no error if NULL is passed.
+    return QualType();
+  }
   if (isa<TypedValueRegion>(region)) {
     return cast<TypedValueRegion>(region)->getLocationType().getCanonicalType();
-  } else if (isa<SymbolicRegion>(region)) {
+  }
+  if (isa<SymbolicRegion>(region)) {
     return cast<SymbolicRegion>(region)
         ->getSymbol()
         ->getType()
