@@ -338,8 +338,13 @@ void PHPZPPChecker::initIdentifierInfo(ASTContext &Ctx) const {
 }
 
 static void initPHPChecker(CheckerManager &mgr) {
+  long version = 1;
+  const char *from_env = getenv("PHP_ZPP_CHECKER_VERSION");
+  if (from_env) {
+    version = strtol(from_env, NULL, 0);
+  }
   PHPZPPChecker *checker = mgr.registerChecker<PHPZPPChecker>();
-  switch (mgr.getAnalyzerOptions().getOptionAsInteger("php-zpp-version", 1)) {
+  switch (mgr.getAnalyzerOptions().getOptionAsInteger("php-zpp-version", version)) {
   case 1:
     checker->setMap(fillMapPHP55);
     break;

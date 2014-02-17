@@ -59,8 +59,10 @@ Usage:
                 make
   So first we configure PHP, usin the wrapper script ensures tosetup the proper
   compiler but we don't want to run all checks during confiure phase. After that
-  we enableall tests.
+  we enable all tests.
   Unfortunately scan-build doesn't allow passing extra options (-analyzer-config)
+  The version can also be choosen by setting the PHP_ZPP_CHECKER_VERSION
+  environment variable accordingly.
 
 Licensing:
   Currently University of Illinois Open Source License is being used. Eventually
