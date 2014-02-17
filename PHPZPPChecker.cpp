@@ -19,14 +19,18 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
-#include <iostream>
-
 using namespace clang;
 using namespace ento;
 
 typedef llvm::Optional<const std::string> PHPNativeType;
 typedef std::multimap<char, const PHPNativeType> PHPTypeMap;
 typedef std::pair<const PHPTypeMap::const_iterator, const PHPTypeMap::const_iterator> PHPTypeRange;
+
+#ifdef DEBUG_PHP_ZPP_CHECKER
+#define debug_stream llvm::outs()
+#else
+#define debug_stream llvm::nulls()
+#endif
 
 #define MAPPING(format, type)                                                  \
   map.insert(std::pair<char, const PHPNativeType>((format), std::string(type)))
@@ -173,7 +177,7 @@ bool PHPZPPChecker::compareTypeWithSVal(unsigned offset, char modifier, const SV
 
   if (type.isNull()) {
     // TODO need a good way to report this, even though this is no error
-    std::cout << "Couldn't get type for argument at offset " << offset << std::endl;
+    llvm::outs() << "Couldn't get type for argument at offset " << offset << "\n";
     val.dump();
     return false;
   }
@@ -198,11 +202,11 @@ bool PHPZPPChecker::checkArgs(const StringRef &format_spec,
                                   unsigned &offset, const unsigned numArgs,
                                   const CallEvent &Call,
                                   CheckerContext &C) const {
-  // Call.dump();
+  Call.dump(debug_stream);
   for (StringRef::const_iterator modifier = format_spec.begin(),
                                  last_mod = format_spec.end();
        modifier != last_mod; ++modifier) {
-//std::cout << "  I am checking for " << *modifier << std::endl;
+    debug_stream << "  I am checking for " << *modifier << "\n";
     const PHPTypeRange range = map.equal_range(*modifier);
 
     if (range.first == range.second) {
@@ -223,7 +227,7 @@ bool PHPZPPChecker::checkArgs(const StringRef &format_spec,
         continue;
       }
       ++offset;
-//std::cout << "    I need a " << *type->second << " (" << offset << ")" << std::endl;
+      debug_stream << "    I need a " << *type->second << " (" << offset << ")\n";
       if (numArgs <= offset) {
         SmallString<255> buf;
         llvm::raw_svector_ostream os(buf);
@@ -232,7 +236,7 @@ bool PHPZPPChecker::checkArgs(const StringRef &format_spec,
         BugReport *R = new BugReport(*WrongArgumentNumberBugType, os.str(),
                                      C.addTransition());
         C.emitReport(R);
-//std::cout << "!!!!I am missing args! " << numArgs << "<=" << offset << std::endl;
+        debug_stream << "!!!!I am missing args! " << numArgs << "<=" << offset << "\n";
         return false;
       }
 
@@ -277,7 +281,7 @@ void PHPZPPChecker::checkPreCall(const CallEvent &Call,
       getCStringLiteral(Call.getArgSVal(offset));
   if (!format_spec_sl) {
     // TODO need a good way to report this, even though this is no error
-    std::cout << "Couldn't get format string looked at offset " << offset << std::endl;
+    llvm::outs() << "Couldn't get format string looked at offset " << offset << "\n";
     Call.dump();
     return;
   }
