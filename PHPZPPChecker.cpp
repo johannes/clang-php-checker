@@ -28,35 +28,32 @@ using namespace ento;
 #define debug_stream llvm::nulls()
 #endif
 
-#define MAPPING(format, type)                                                  \
-  map.insert(std::pair<char, const PHPNativeType>((format), std::string(type)))
-#define MAPPING2(format, printT, canonicalT)                                   \
-  map.insert(std::pair<char, const PHPNativeType>(                             \
-      (format), PHPNativeType((printT), (canonicalT))))
+#define MAPPING(format, type, pointer_level)                                   \
+  map.insert(PHPTypeMap::value_type((format),                                  \
+                                    PHPNativeType((type), (pointer_level))))
 #define MAPPING_EMPTY(format)                                                  \
-  map.insert(std::pair<char, const PHPNativeType>((format), PHPNativeType()));
+  map.insert(std::pair<char, const PHPNativeType>((format), PHPNativeType()))
 
 namespace {
 class PHPNativeType {
-  const std::string printType;
-  const std::string canonicalType;
+  const StringRef name;
   const bool hasVal;
+  int pointerLevel;
 
 public:
   PHPNativeType() : hasVal(false) {}
-  PHPNativeType(const std::string &type)
-      : printType(type), canonicalType(type), hasVal(true) {}
-  PHPNativeType(const std::string &printType, const std::string &canonicalType)
-      : printType(printType), canonicalType(canonicalType), hasVal(true) {}
+  PHPNativeType(const StringRef &name, int pointerLevel = 0)
+      : name(name), hasVal(true), pointerLevel(pointerLevel) {}
 
-  const std::string &getPrintType() const {
+  const StringRef &getName() const {
     assert(hasVal);
-    return printType;
+    return name;
   }
-  const std::string &getCanonicalType() const {
-    assert(hasVal);
-    return canonicalType;
+
+  int getPointerLevel() const {
+    return pointerLevel;
   }
+
   operator bool() const { return hasVal; }
 };
 
@@ -64,52 +61,59 @@ typedef std::multimap<char, const PHPNativeType> PHPTypeMap;
 typedef std::pair<const PHPTypeMap::const_iterator,
                   const PHPTypeMap::const_iterator> PHPTypeRange;
 
-// These mappings map a zpp modifier to underlying types. Mind that we
-// reference the canonical form here, thus HashTable becomes struct _hashtable.
-// to make it nice for users the "common" printable alias can e provided.
-// Also mind the indirection level: zpp receives the address of the object to
-// store in wich adds a level.
+// These mappings map a zpp modifier to underlying types. The second argument
+// refers to the indirectionlevel, mind: zpp receives the address of the object
+// to store in wich adds a level.
 // Some types return multiple values, these are added multiple times inorder to
 // this list (i.e. a string "s" consists of a char array and length)
-static void fillMapPHP55(PHPTypeMap &map) {
-  MAPPING2('a', "zval **", "struct _zval_struct **");
-  MAPPING2('A', "zval **", "struct _zval_struct **");
-  MAPPING2('b', "zend_bool *", "unsigned char *");
-  MAPPING2('C', "zend_class_entry **", "struct _zend_class_entry **");
-  MAPPING('d', "double *");
-  MAPPING2('f', "zend_fcall_info *", "struct _zend_fcall_info *");
-  MAPPING2('f', "zend_fcall_info_cache *", "struct _zend_fcall_info_cache *");
-  MAPPING2('h', "HashTable **", "struct _hashtable **");
-  MAPPING2('H', "HashTable **", "struct _hashtable **");
-  MAPPING('l', "long *");
-  MAPPING('L', "long *");
-  MAPPING2('o', "zval **", "struct _zval_struct **");
-  MAPPING2('O', "zval **", "struct _zval_struct **");
-  MAPPING2('O', "zend_class_entry *", "struct _zend_class_entry *");
-  MAPPING('p', "char **");
-  MAPPING('p', "int *");
-  MAPPING2('r', "zval **", "struct _zval_struct **");
-  MAPPING('s', "char **");
-  MAPPING('s', "int *");
-  MAPPING2('z', "zval **", "struct _zval_struct **");
-  MAPPING2('Z', "zval **", "struct _zval_struct ***");
+static void fillMapPHPBase(PHPTypeMap &map) {
+  MAPPING('a', "zval", 2);
+  MAPPING('A', "zval", 2);
+  MAPPING('b', "zend_bool", 1);
+  MAPPING('C', "zend_class_entry", 2);
+  MAPPING('d', "double", 1);
+  MAPPING('f', "zend_fcall_info", 1);
+  MAPPING('f', "zend_fcall_info_cache", 1);
+  MAPPING('h', "HashTable", 2);
+  MAPPING('H', "HashTable", 2);
+  MAPPING('o', "zval", 2);
+  MAPPING('O', "zval", 2);
+  MAPPING('O', "zend_class_entry", 1);
+  MAPPING('r', "zval", 2);
+  MAPPING('z', "zval", 2);
+  MAPPING('Z', "zval", 3);
   MAPPING_EMPTY('|');
   MAPPING_EMPTY('/');
-  MAPPING_EMPTY('!')
-  MAPPING2('+', "zval ****", "struct _zval_struct ****");
-  MAPPING('+', "int *");
-  MAPPING2('*', "zval ****", "struct _zval_struct ****");
-  MAPPING('*', "int *");
+  MAPPING_EMPTY('!');
+  MAPPING('+', "zval", 4);
+  MAPPING('+', "int", 1);
+  MAPPING('*', "zval", 4);
+  MAPPING('*', "int", 1);
+}
+
+static void fillMapPHP55(PHPTypeMap &map) {
+  fillMapPHPBase(map);
+  MAPPING('l', "long", 1);
+  MAPPING('L', "long", 1);
+  MAPPING('p', "char", 2);
+  MAPPING('p', "int", 1);
+  MAPPING('s', "char", 2);
+  MAPPING('s', "int", 1);
 }
 
 // TODO: This is a sample, please replace it if you add support for a new
 // PHP version
 static void fillMapPHPSample(PHPTypeMap &map) {
-  MAPPING('a', "struct _zval_struct **");
-  MAPPING('A', "struct _zval_struct **");
+  fillMapPHPBase(map);
+  MAPPING('i', "zend_int_t", 1);
+  MAPPING('P', "char", 2);
+  MAPPING('P', "zend_size_t", 1);
+  MAPPING('S', "char", 2);
+  MAPPING('S', "zend_size_t", 1);
 }
 
-class PHPZPPChecker : public Checker<check::PreCall> {
+class PHPZPPChecker
+    : public Checker<check::PreCall, check::ASTDecl<TypedefDecl> > {
   mutable IdentifierInfo *IIzpp, *IIzpp_ex, *IIzpmp, *IIzpmp_ex;
 
   OwningPtr<BugType> InvalidTypeBugType;
@@ -118,10 +122,14 @@ class PHPZPPChecker : public Checker<check::PreCall> {
 
   PHPTypeMap map;
 
+  typedef std::map<const StringRef, QualType> TypedefMap;
+  mutable TypedefMap typedefs;
+
   void initIdentifierInfo(ASTContext &Ctx) const;
 
   const StringLiteral *getCStringLiteral(const SVal val) const;
-  bool compareTypeWithSVal(unsigned offset, char modifier, const SVal &val, const PHPNativeType &expectedType,
+  bool compareTypeWithSVal(unsigned offset, char modifier, const SVal &val,
+                           const PHPNativeType &expectedType,
                            CheckerContext &C) const;
   bool checkArgs(const StringRef &format_spec, unsigned &offset,
                  const unsigned numArgs, const CallEvent &Call,
@@ -133,8 +141,9 @@ public:
   typedef void (*MapFiller)(PHPTypeMap &);
   void setMap(MapFiller filler);
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
+  void checkASTDecl(const TypedefDecl *td, AnalysisManager &Mgr,
+                    BugReporter &BR) const;
 };
-
 }
 
 PHPZPPChecker::PHPZPPChecker()
@@ -184,13 +193,12 @@ static const QualType getQualTypeForSVal(const SVal &val) {
     return QualType();
   }
   if (isa<TypedValueRegion>(region)) {
-    return cast<TypedValueRegion>(region)->getLocationType().getCanonicalType();
+    return cast<TypedValueRegion>(region)->getLocationType();
   }
   if (isa<SymbolicRegion>(region)) {
     return cast<SymbolicRegion>(region)
         ->getSymbol()
-        ->getType()
-        .getCanonicalType();
+        ->getType();
   }
   return QualType();
 }
@@ -198,28 +206,66 @@ static const QualType getQualTypeForSVal(const SVal &val) {
 bool PHPZPPChecker::compareTypeWithSVal(unsigned offset, char modifier, const SVal &val,
                                             const PHPNativeType &expectedType,
                                             CheckerContext &C) const {
-  const QualType type = getQualTypeForSVal(val);
+ 
+  const QualType initialType = getQualTypeForSVal(val);
 
-  if (type.isNull()) {
+  if (initialType.isNull()) {
     // TODO need a good way to report this, even though this is no error
     llvm::outs() << "Couldn't get type for argument at offset " << offset << "\n";
     val.dump();
     return false;
   }
 
-  if (expectedType.getCanonicalType() != type.getAsString()) {
+  QualType type = initialType.getCanonicalType();
+
+  int passedPointerLevel = 0;
+  while (type->isPointerType()) {
+    ++passedPointerLevel;
+    type = type->getPointeeType();
+  }
+
+  bool match = false;
+  TypedefMap::iterator typedef_ = typedefs.find(expectedType.getName());
+  if (typedef_ != typedefs.end()) {
+    // TODO: There must be something smarter than a string comparison
+    match = (type.getAsString() == typedef_->second.getAsString());
+  } else {
+    match = (type.getAsString() == expectedType.getName());
+  }
+
+  if (!match) {
     SmallString<256> buf;
     llvm::raw_svector_ostream os(buf);
     os << "Type of passed argument ";
     val.dumpToStream(os);
-    os << " is of type "<< type.getAsString()
-       << " which did not match expected " << expectedType.getPrintType() << " (aka. " << expectedType.getCanonicalType() << ") for modifier '"
-       << modifier << "' at offset " << offset + 1 << ".";
-    BugReport *R = new BugReport(*InvalidTypeBugType, os.str(), C.addTransition());
+    os << " is of type " << initialType.getAsString()
+       << " which did not match expected " << expectedType.getName() << " ";
+    for (int i = 0; i < expectedType.getPointerLevel(); ++i) {
+      os << "*";
+    }
+    os << " for modifier '" << modifier << "' at offset " << offset + 1 << ".";
+    BugReport *R =
+        new BugReport(*InvalidTypeBugType, os.str(), C.addTransition());
     R->markInteresting(val);
     C.emitReport(R);
     return false;
   }
+
+  if (passedPointerLevel != expectedType.getPointerLevel()) {
+    SmallString<256> buf;
+    llvm::raw_svector_ostream os(buf);
+    os << "Pointer indirection level of passed argument ";
+    val.dumpToStream(os);
+    os << " is " << passedPointerLevel << " which did not match expected "
+       << expectedType.getPointerLevel() << " for modifier '" << modifier
+       << "' at offset " << offset + 1 << ".";
+    BugReport *R =
+        new BugReport(*InvalidTypeBugType, os.str(), C.addTransition());
+    R->markInteresting(val);
+    C.emitReport(R);
+    return false;
+  }
+
   return true;
 }
 
@@ -252,7 +298,7 @@ bool PHPZPPChecker::checkArgs(const StringRef &format_spec,
         continue;
       }
       ++offset;
-      debug_stream << "    I need a " << type->second.getCanonicalType() << " (" << offset << ")\n";
+      debug_stream << "    I need a " << type->second.getName() << " (" << offset << ")\n";
       if (numArgs <= offset) {
         SmallString<255> buf;
         llvm::raw_svector_ostream os(buf);
@@ -325,6 +371,14 @@ void PHPZPPChecker::checkPreCall(const CallEvent &Call,
     R->markInteresting(Call.getArgSVal(offset));
     C.emitReport(R);
   }
+}
+
+void PHPZPPChecker::checkASTDecl(const TypedefDecl *td, AnalysisManager &Mgr, BugReporter &BR) const {
+  // This extra map might be quite inefficient, probably we should iterat over the delarations, later in
+  // the check?
+  // for (DeclContext::decl_iterator it = decl->getParent()->decls_begin(); it != decl->getParent()->decls_end(); ++it) { if (isa<TypedefDecl>(*it)) {
+
+  typedefs.insert(std::pair<const StringRef, QualType>(td->getName(), td->getUnderlyingType()));
 }
 
 void PHPZPPChecker::initIdentifierInfo(ASTContext &Ctx) const {
