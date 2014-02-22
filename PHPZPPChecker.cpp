@@ -122,7 +122,7 @@ class PHPZPPChecker
 
   PHPTypeMap map;
 
-  typedef std::map<const StringRef, QualType> TypedefMap;
+  typedef std::map<const StringRef, const QualType> TypedefMap;
   mutable TypedefMap typedefs;
 
   void initIdentifierInfo(ASTContext &Ctx) const;
@@ -225,7 +225,7 @@ bool PHPZPPChecker::compareTypeWithSVal(unsigned offset, char modifier, const SV
   }
 
   bool match = false;
-  TypedefMap::iterator typedef_ = typedefs.find(expectedType.getName());
+  const TypedefMap::const_iterator typedef_ = typedefs.find(expectedType.getName());
   if (typedef_ != typedefs.end()) {
     // TODO: There must be something smarter than a string comparison
     match = (type.getAsString() == typedef_->second.getAsString());
