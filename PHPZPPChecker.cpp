@@ -114,7 +114,7 @@ static void fillMapPHP55(PHPTypeMap &map) {
 static void fillMapPHPSizeTInt64(PHPTypeMap &map) {
   fillMapPHPBase(map);
   MAPPING('i', "zend_int_t", "*");
-  MAPPING('l', "zend_int_t", "*");
+  MAPPING('I', "zend_int_t", "*");
   MAPPING('P', "char", "**");
   MAPPING('P', "zend_size_t", "*");
   MAPPING('S', "char", "**");
@@ -157,6 +157,16 @@ public:
 
 PHPZPPChecker::PHPZPPChecker()
     : IIzpp(0), IIzpp_ex(0), IIzpmp(0), IIzpmp_ex(0) {
+/* XXX that probably shouldn't be NULL but a valid checker, */
+#if CLANG_VERSION_MAJOR >= 3 && CLANG_VERSION_MINOR >= 5
+  InvalidTypeBugType.reset(new BugType(NULL, "Invalid type", "PHP ZPP API Error"));
+
+  InvalidModifierBugType.reset(
+      new BugType(NULL, "Invalid modifier", "PHP ZPP API Error"));
+
+  WrongArgumentNumberBugType.reset(
+      new BugType(NULL, "Wrong number of zpp arguments", "PHP ZPP API Error"));
+#else
   InvalidTypeBugType.reset(new BugType("Invalid type", "PHP ZPP API Error"));
 
   InvalidModifierBugType.reset(
@@ -164,6 +174,7 @@ PHPZPPChecker::PHPZPPChecker()
 
   WrongArgumentNumberBugType.reset(
       new BugType("Wrong number of zpp arguments", "PHP ZPP API Error"));
+#endif
 }
 
 void PHPZPPChecker::setMap(MapFiller filler) {
@@ -420,7 +431,7 @@ static void initPHPChecker(CheckerManager &mgr) {
 }
 
 
-extern "C" void clang_registerCheckers(CheckerRegistry &registry) {
+extern "C" CLANGPHPCHECKER_EXPORT void clang_registerCheckers(CheckerRegistry &registry) {
   registry.addChecker(initPHPChecker, "php.ZPPChecker",
                       "Check zend_parse_parameters usage");
 }
