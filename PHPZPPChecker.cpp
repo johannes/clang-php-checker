@@ -106,6 +106,7 @@ static void fillMapPHP55(PHPTypeMap &map) {
 static void fillMapPHPSample(PHPTypeMap &map) {
   fillMapPHPBase(map);
   MAPPING('i', "zend_int_t", 1);
+  MAPPING('l', "zend_int_t", 1);
   MAPPING('P', "char", 2);
   MAPPING('P', "zend_size_t", 1);
   MAPPING('S', "char", 2);
