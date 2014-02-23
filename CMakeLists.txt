@@ -1,3 +1,16 @@
+cmake_minimum_required(VERSION 2.8)
+
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
+
+project(clangPHPChecker CXX)
+
+Find_Package(LLVM REQUIRED)
+link_directories( ${LLVM_LIB_DIR} )
+
+Find_Package(Clang REQUIRED)
+
+include_directories(${CLANG_INCLUDE_DIRS})
+
 set(LLVM_LINK_COMPONENTS
   Support
   )
