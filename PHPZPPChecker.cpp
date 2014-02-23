@@ -228,8 +228,7 @@ bool PHPZPPChecker::compareTypeWithSVal(unsigned offset, char modifier, const SV
   bool match = false;
   const TypedefMap::const_iterator typedef_ = typedefs.find(expectedType.getName());
   if (typedef_ != typedefs.end()) {
-    // TODO: There must be something smarter than a string comparison
-    match = (type.getAsString() == typedef_->second.getAsString());
+    match = (type == typedef_->second.getCanonicalType());
   } else {
     match = (type.getAsString() == expectedType.getName());
   }
