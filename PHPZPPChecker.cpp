@@ -101,9 +101,7 @@ static void fillMapPHP55(PHPTypeMap &map) {
   MAPPING('s', "int", 1);
 }
 
-// TODO: This is a sample, please replace it if you add support for a new
-// PHP version
-static void fillMapPHPSample(PHPTypeMap &map) {
+static void fillMapPHPSizeTInt64(PHPTypeMap &map) {
   fillMapPHPBase(map);
   MAPPING('i', "zend_int_t", 1);
   MAPPING('l', "zend_int_t", 1);
@@ -403,7 +401,7 @@ static void initPHPChecker(CheckerManager &mgr) {
     checker->setMap(fillMapPHP55);
     break;
   case 2:
-    checker->setMap(fillMapPHPSample);
+    checker->setMap(fillMapPHPSizeTInt64);
     break;
   default:
     // TODO: ERROR
