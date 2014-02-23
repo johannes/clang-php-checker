@@ -29,8 +29,8 @@ using namespace ento;
 #endif
 
 #define MAPPING(format, type, pointer_level)                                   \
-  map.insert(PHPTypeMap::value_type((format),                                  \
-                                    PHPNativeType((type), (pointer_level))))
+  map.insert(PHPTypeMap::value_type(                                           \
+      (format), PHPNativeType((type), sizeof(pointer_level) - 1)))
 #define MAPPING_EMPTY(format)                                                  \
   map.insert(std::pair<char, const PHPNativeType>((format), PHPNativeType()))
 
@@ -67,48 +67,48 @@ typedef std::pair<const PHPTypeMap::const_iterator,
 // Some types return multiple values, these are added multiple times inorder to
 // this list (i.e. a string "s" consists of a char array and length)
 static void fillMapPHPBase(PHPTypeMap &map) {
-  MAPPING('a', "zval", 2);
-  MAPPING('A', "zval", 2);
-  MAPPING('b', "zend_bool", 1);
-  MAPPING('C', "zend_class_entry", 2);
-  MAPPING('d', "double", 1);
-  MAPPING('f', "zend_fcall_info", 1);
-  MAPPING('f', "zend_fcall_info_cache", 1);
-  MAPPING('h', "HashTable", 2);
-  MAPPING('H', "HashTable", 2);
-  MAPPING('o', "zval", 2);
-  MAPPING('O', "zval", 2);
-  MAPPING('O', "zend_class_entry", 1);
-  MAPPING('r', "zval", 2);
-  MAPPING('z', "zval", 2);
-  MAPPING('Z', "zval", 3);
+  MAPPING('a', "zval", "**");
+  MAPPING('A', "zval", "**");
+  MAPPING('b', "zend_bool", "*");
+  MAPPING('C', "zend_class_entry", "**");
+  MAPPING('d', "double", "*");
+  MAPPING('f', "zend_fcall_info", "*");
+  MAPPING('f', "zend_fcall_info_cache", "*");
+  MAPPING('h', "HashTable", "**");
+  MAPPING('H', "HashTable", "**");
+  MAPPING('o', "zval", "**");
+  MAPPING('O', "zval", "**");
+  MAPPING('O', "zend_class_entry", "*");
+  MAPPING('r', "zval", "**");
+  MAPPING('z', "zval", "**");
+  MAPPING('Z', "zval", "***");
   MAPPING_EMPTY('|');
   MAPPING_EMPTY('/');
   MAPPING_EMPTY('!');
-  MAPPING('+', "zval", 4);
-  MAPPING('+', "int", 1);
-  MAPPING('*', "zval", 4);
-  MAPPING('*', "int", 1);
+  MAPPING('+', "zval", "****");
+  MAPPING('+', "int", "*");
+  MAPPING('*', "zval", "****");
+  MAPPING('*', "int", "*");
 }
 
 static void fillMapPHP55(PHPTypeMap &map) {
   fillMapPHPBase(map);
-  MAPPING('l', "long", 1);
-  MAPPING('L', "long", 1);
-  MAPPING('p', "char", 2);
-  MAPPING('p', "int", 1);
-  MAPPING('s', "char", 2);
-  MAPPING('s', "int", 1);
+  MAPPING('l', "long", "*");
+  MAPPING('L', "long", "*");
+  MAPPING('p', "char", "**");
+  MAPPING('p', "int", "*");
+  MAPPING('s', "char", "**");
+  MAPPING('s', "int", "*");
 }
 
 static void fillMapPHPSizeTInt64(PHPTypeMap &map) {
   fillMapPHPBase(map);
-  MAPPING('i', "zend_int_t", 1);
-  MAPPING('l', "zend_int_t", 1);
-  MAPPING('P', "char", 2);
-  MAPPING('P', "zend_size_t", 1);
-  MAPPING('S', "char", 2);
-  MAPPING('S', "zend_size_t", 1);
+  MAPPING('i', "zend_int_t", "*");
+  MAPPING('l', "zend_int_t", "*");
+  MAPPING('P', "char", "**");
+  MAPPING('P', "zend_size_t", "*");
+  MAPPING('S', "char", "**");
+  MAPPING('S', "zend_size_t", "*");
 }
 
 class PHPZPPChecker
