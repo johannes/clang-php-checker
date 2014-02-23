@@ -17,11 +17,11 @@ set(LIBRARIES
 #option(clangPHPChecker_BUILD_STATIC
 #  "Build clangPHPChecker as a static library (in addition to a shared one)" OFF)
 
-set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/clangPHPChecker.exports)
+#set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/clangPHPChecker.exports)
 
-if(MSVC)
-  set(LLVM_EXPORTED_SYMBOL_FILE)
-endif()
+#if(MSVC)
+#  set(LLVM_EXPORTED_SYMBOL_FILE)
+#endif()
 
 if( LLVM_ENABLE_PIC )
   add_clang_library(clangPHPChecker SHARED ${SOURCES})
