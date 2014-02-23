@@ -10,34 +10,17 @@ if (CLANG_${_libname_}_LIB)
 endif(CLANG_${_libname_}_LIB)
 ENDMACRO(FIND_AND_ADD_CLANG_LIB)
 
+find_path(CLANG_INCLUDE_DIRS clang/Basic/Version.h HINTS ${LLVM_INCLUDE_DIRS})
+
 set(CLANG_INCLUDE_DIRS ${CLANG_INCLUDE_DIRS} ${LLVM_INCLUDE_DIR})
 set(CLANG_INCLUDE_DIRS ${CLANG_INCLUDE_DIRS} ${CLANG_INCLUDE_DIR})
 
-FIND_AND_ADD_CLANG_LIB(clangFrontend)
-FIND_AND_ADD_CLANG_LIB(clangDriver)
-# FIND_AND_ADD_CLANG_LIB(clangCodeGen)
-FIND_AND_ADD_CLANG_LIB(clangSema)
-# FIND_AND_ADD_CLANG_LIB(clangChecker)
-FIND_AND_ADD_CLANG_LIB(clangAnalysis)
-# FIND_AND_ADD_CLANG_LIB(clangRewrite)
 FIND_AND_ADD_CLANG_LIB(clangAST)
-FIND_AND_ADD_CLANG_LIB(clangParse)
-FIND_AND_ADD_CLANG_LIB(clangLex)
+FIND_AND_ADD_CLANG_LIB(clangAnalysis)
 FIND_AND_ADD_CLANG_LIB(clangBasic)
-# FIND_AND_ADD_CLANG_LIB(clangARCMigrate)
-FIND_AND_ADD_CLANG_LIB(clangEdit)
-# FIND_AND_ADD_CLANG_LIB(clangFrontendTool)
-# FIND_AND_ADD_CLANG_LIB(clangRewrite)
-FIND_AND_ADD_CLANG_LIB(clangSerialization)
-FIND_AND_ADD_CLANG_LIB(clangTooling)
-# FIND_AND_ADD_CLANG_LIB(clangStaticAnalyzerCheckers)
-# FIND_AND_ADD_CLANG_LIB(clangStaticAnalyzerCore)
-# FIND_AND_ADD_CLANG_LIB(clangStaticAnalyzerFrontend)
-FIND_AND_ADD_CLANG_LIB(clangSema)
-# FIND_AND_ADD_CLANG_LIB(clangRewriteCore)
-
-
-
+FIND_AND_ADD_CLANG_LIB(clangLex)
+FIND_AND_ADD_CLANG_LIB(clangStaticAnalyzerCore)
+#FIND_AND_ADD_CLANG_LIB(Support)
 
 
 MESSAGE(STATUS "Clang libs: " ${CLANG_LIBS})
