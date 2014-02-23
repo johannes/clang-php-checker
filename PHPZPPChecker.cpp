@@ -22,7 +22,7 @@
 #include <iostream>
 
 #if defined (_WIN32) 
-  #if defined(clangphpchecker_EXPORTS)
+  #if defined(clangPHPChecker_EXPORTS)
     #define  CLANGPHPCHECKER_EXPORT __declspec(dllexport)
   #else
     #define  CLANGPHPCHECKER_EXPORT __declspec(dllimport)
