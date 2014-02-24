@@ -18,6 +18,13 @@ About this project:
   type of the C variable. This plugin enriches the Clang Static Analyzer
   with a capaility to check it.
 
+Requirements:
+  Clang >= 3.4
+  CMAKE >= 2.8 (optional, might work with earlir versions)
+
+  On debian based systems you can obtain the newer Clang binaries using the
+  instructions from http://llvm.org/apt/
+
 Simple installation:
   A simple Makefile is provided. Prerequirement is an installation of Clang,
   including headers and the llvm-config tool. If llvm-config and clang are in
@@ -31,8 +38,13 @@ Installing with cmake:
   sequence to build on Ubuntu:
 
   aptitude install clang llvm-dev libclang-dev
-  cmake -G"Unix Makefiles" -DCLANG_INCLUDE_DIRS:STRING=/usr/include/clang/<version>
+  cmake -G"Unix Makefiles" -DCLANG_INCLUDE_DIRS:STRING=/usr/include/clang/3.4/ \
+           -DLLVM_CONFIG_EXECUTABLE:STRING=/usr/bin/llvm-config-3.4
   make
+
+  Note the explicit Clang version, that might change for your particular
+  system. Or even it could be ommited when the minimal required Clang version
+  is in the path.
 
   On Windows it'll work similar way, though note that LLVM has Visual Studio
   2012 as requirement. Therefore you'll need cmake >= 2.8 and the generator
