@@ -19,16 +19,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
-#if defined (_WIN32) 
-  #if defined(clangPHPChecker_EXPORTS)
-    #define  CLANGPHPCHECKER_EXPORT __declspec(dllexport)
-  #else
-    #define  CLANGPHPCHECKER_EXPORT __declspec(dllimport)
-  #endif /* MyLibrary_EXPORTS */
-#else /* defined (_WIN32) */
- #define CLANGPHPCHECKER_EXPORT
-#endif
-
 using namespace clang;
 using namespace ento;
 
@@ -155,7 +145,7 @@ public:
 };
 }
 
-#if CLANG_VERSION_MAJOR >= 3 && CLANG_VERSION_MINOR >= 5
+#if (CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 5) || CLANG_VERSION_MAJOR > 3
 /* XXX that probably shouldn't be NULL but a valid checker, */
 # define CHECKER_CLASS NULL,
 #else
