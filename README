@@ -38,7 +38,7 @@ Installing with cmake:
   2012 as requirement. Therefore you'll need cmake >= 2.8 and the generator
   name there is "Visual Studio 11". Depending on required Clang version, you
   might need to build Clang yourself. For that case some useful doc can be
-  found under clang.llvm.org/get_started.html
+  found under http://clang.llvm.org/get_started.html
 
 Usage:
   To check a simple file one has to load the plugin and activate the checker
