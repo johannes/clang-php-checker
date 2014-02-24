@@ -20,8 +20,6 @@ FIND_AND_ADD_CLANG_LIB(clangAnalysis)
 FIND_AND_ADD_CLANG_LIB(clangBasic)
 FIND_AND_ADD_CLANG_LIB(clangLex)
 FIND_AND_ADD_CLANG_LIB(clangStaticAnalyzerCore)
-#FIND_AND_ADD_CLANG_LIB(Support)
-
 
 MESSAGE(STATUS "Clang libs: " ${CLANG_LIBS})
 
