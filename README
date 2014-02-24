@@ -18,14 +18,27 @@ About this project:
   type of the C variable. This plugin enriches the Clang Static Analyzer
   with a capaility to check it.
 
-Installation:
-  A simple Makefile is provided. A "proper" build system would be accepted.
-  Prerequirement is an installation of Clang, including headers and the
-  llvm-config tool. If llvm-config and clang are in the PATH a simple `make`
-  should compile the plugin. If llvm-config is not in PATH the environment
-  variable LLVM_CONFIG can be set accordingly. CXX and CXXFLAGS are observed
-  to set custom compiler options.
+Simple installation:
+  A simple Makefile is provided. Prerequirement is an installation of Clang,
+  including headers and the llvm-config tool. If llvm-config and clang are in
+  the PATH a simple `make` should compile the plugin. If llvm-config is not
+  in PATH the environment variable LLVM_CONFIG can be set accordingly. CXX
+  and CXXFLAGS are observed to set custom compiler options.
   A make install target currently does not exist.
+
+Installing with cmake:
+  With cmake cross platform builds can be achieved. An example command
+  sequence to build on Ubuntu:
+
+  aptitude install clang llvm-dev libclang-dev
+  cmake -G"Unix Makefiles" -DCLANG_INCLUDE_DIRS:STRING=/usr/include/clang/<version>
+  make
+
+  On Windows it'll work similar way, though note that LLVM has Visual Studio
+  2012 as requirement. Therefore you'll need cmake >= 2.8 and the generator
+  name there is "Visual Studio 11". Depending on required Clang version, you
+  might need to build Clang yourself. For that case some useful doc can be
+  found under clang.llvm.org/get_started.html
 
 Usage:
   To check a simple file one has to load the plugin and activate the checker
