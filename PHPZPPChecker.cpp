@@ -128,7 +128,7 @@ class PHPZPPChecker
 
   void initIdentifierInfo(ASTContext &Ctx) const;
 
-  const StringLiteral *getCStringLiteral(const SVal val) const;
+  const StringLiteral *getCStringLiteral(const SVal &val) const;
   bool compareTypeWithSVal(unsigned offset, char modifier, const SVal &val,
                            const PHPNativeType &expectedType,
                            CheckerContext &C) const;
@@ -170,7 +170,7 @@ void PHPZPPChecker::setMap(MapFiller filler) {
   filler(map);
 }
 
-const StringLiteral *PHPZPPChecker::getCStringLiteral(const SVal val) const {
+const StringLiteral *PHPZPPChecker::getCStringLiteral(const SVal &val) const {
 
   // Copied from tools/clang/lib/StaticAnalyzer/Checkers/CStringChecker.cpp
 
