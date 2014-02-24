@@ -19,6 +19,8 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
+#include <cassert>
+
 using namespace clang;
 using namespace ento;
 
