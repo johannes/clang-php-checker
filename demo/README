@@ -1,0 +1,12 @@
+This "extension" serves as a testing bed for the clang static analyzer plugin.
+While it is supposed to compile like a regular PHP extension it is not
+functional. It (purposly) won't load into PHP.
+
+Use PHP Clang Analyzer like this on this code:
+
+ $ phpize
+ $ scan-build ./configure
+ $ scan-build -load-plugin ../libclangPHPChecker.so \
+              -enable-checker php.ZPPChecker \
+	      make
+
