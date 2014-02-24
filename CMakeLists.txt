@@ -22,5 +22,8 @@ endif()
 add_library(clangPHPChecker SHARED  PHPZPPChecker.cpp)
 
 #target_link_libraries(clangPHPChecker ${CLANG_LIBS} ${LLVM_LIBS_CORE} )
-target_link_libraries(clangPHPChecker ${CLANG_LIBS} LLVMSupport )
-
+if (WIN32)
+	target_link_libraries(clangPHPChecker ${CLANG_LIBS} LLVMSupport )
+else()
+	target_link_libraries(clangPHPChecker)
+endif()
