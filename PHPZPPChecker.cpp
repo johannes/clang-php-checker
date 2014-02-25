@@ -63,6 +63,15 @@ public:
   operator bool() const { return hasVal; }
 };
 
+template <typename ostream>
+ostream &operator<<(ostream &os, const PHPNativeType &type) {
+  os << type.getName() << " ";
+  for (int i = 0; i < type.getPointerLevel(); ++i) {
+    os << "*";
+  }
+  return os;
+}
+
 typedef std::multimap<char, const PHPNativeType> PHPTypeMap;
 typedef std::pair<const PHPTypeMap::const_iterator,
                   const PHPTypeMap::const_iterator> PHPTypeRange;
@@ -204,6 +213,7 @@ static const QualType getQualTypeForSVal(const SVal &val) {
     // is 0 as it is hard coded in this case. Right now we report no error if NULL is passed.
     return QualType();
   }
+
   if (isa<TypedValueRegion>(region)) {
     return cast<TypedValueRegion>(region)->getLocationType();
   }
@@ -250,11 +260,8 @@ bool PHPZPPChecker::compareTypeWithSVal(unsigned offset, char modifier, const SV
     os << "Type of passed argument ";
     val.dumpToStream(os);
     os << " is of type " << initialType.getAsString()
-       << " which did not match expected " << expectedType.getName() << " ";
-    for (int i = 0; i < expectedType.getPointerLevel(); ++i) {
-      os << "*";
-    }
-    os << " for modifier '" << modifier << "' at offset " << offset + 1 << ".";
+       << " which did not match expected " << expectedType << " for modifier '"
+       << modifier << "' at offset " << offset + 1 << ".";
     BugReport *R =
         new BugReport(*InvalidTypeBugType, os.str(), C.addTransition());
     R->markInteresting(val);
@@ -268,8 +275,8 @@ bool PHPZPPChecker::compareTypeWithSVal(unsigned offset, char modifier, const SV
     os << "Pointer indirection level of passed argument ";
     val.dumpToStream(os);
     os << " is " << passedPointerLevel << " which did not match expected "
-       << expectedType.getPointerLevel() << " for modifier '" << modifier
-       << "' at offset " << offset + 1 << ".";
+       << expectedType.getPointerLevel() << " of " << expectedType
+       << " for modifier '" << modifier << "' at offset " << offset + 1 << ".";
     BugReport *R =
         new BugReport(*InvalidTypeBugType, os.str(), C.addTransition());
     R->markInteresting(val);
@@ -309,7 +316,7 @@ bool PHPZPPChecker::checkArgs(const StringRef &format_spec,
         continue;
       }
       ++offset;
-      debug_stream << "    I need a " << type->second.getName() << " (" << offset << ")\n";
+      debug_stream << "    I need a " << type->second << " (" << offset << ")\n";
       if (numArgs <= offset) {
         SmallString<255> buf;
         llvm::raw_svector_ostream os(buf);
