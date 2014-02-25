@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringSwitch.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerRegistry.h"
@@ -409,24 +410,25 @@ void PHPZPPChecker::initIdentifierInfo(ASTContext &Ctx) const {
   IIzpmp_ex = &Ctx.Idents.get("zend_parse_method_parameters_ex");
 }
 
+static void fillEmpty(PHPTypeMap &) {
+  // TODO: Throw error
+}
+
 static void initPHPChecker(CheckerManager &mgr) {
-  long version = 1;
-  const char *from_env = getenv("PHP_ZPP_CHECKER_VERSION");
-  if (from_env) {
-    version = strtol(from_env, NULL, 0);
+  const char *version = getenv("PHP_ZPP_CHECKER_VERSION");
+  if (!version) {
+    version = "PHP55";
   }
   PHPZPPChecker *checker = mgr.registerChecker<PHPZPPChecker>();
-  switch (mgr.getAnalyzerOptions().getOptionAsInteger("php-zpp-version", version)) {
-  case 1:
-    checker->setMap(fillMapPHP55);
-    break;
-  case 2:
-    checker->setMap(fillMapPHPSizeTInt64);
-    break;
-  default:
-    // TODO: ERROR
-    break;
-  }
+  PHPZPPChecker::MapFiller filler =
+      llvm::StringSwitch<PHPZPPChecker::MapFiller>(
+          mgr.getAnalyzerOptions()
+              .Config.GetOrCreateValue("php-zpp-version", version)
+              .getValue())
+          .Case("PHP55", fillMapPHP55)
+          .Case("PHPSizeTInt64", fillMapPHPSizeTInt64)
+          .Default(fillEmpty);
+  checker->setMap(filler);
 }
 
 
