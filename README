@@ -1,4 +1,4 @@
-PHP Plugin for clang's static analyzer
+PHP-specific Plugin for clang's static analyzer
 
 About clang:
   Clang /ˈklæŋ/ is a compiler front end for the C, C++, Objective-C and
@@ -24,14 +24,6 @@ Requirements:
 
   On debian based systems you can obtain the newer Clang binaries using the
   instructions from http://llvm.org/apt/
-
-Simple installation:
-  A simple Makefile is provided. Prerequirement is an installation of Clang,
-  including headers and the llvm-config tool. If llvm-config and clang are in
-  the PATH a simple `make` should compile the plugin. If llvm-config is not
-  in PATH the environment variable LLVM_CONFIG can be set accordingly. CXX
-  and CXXFLAGS are observed to set custom compiler options.
-  A make install target currently does not exist.
 
 Installing with cmake:
   With cmake cross platform builds can be achieved. An example command
@@ -82,8 +74,8 @@ Usage:
                 -load-plugin /path/to/PHPChecker.so \
                 -enable-checker php.ZPPChecker55 \
                 make
-  So first we configure PHP, usin the wrapper script ensures tosetup the proper
-  compiler but we don't want to run all checks during confiure phase. After that
+  So first we configure PHP, using the wrapper script ensures to setup the proper
+  compiler but we don't want to run all checks during configure phase. After that
   we enable all tests.
   Unfortunately scan-build doesn't allow passing extra options (-analyzer-config)
   The version can also be choosen by setting the PHP_ZPP_CHECKER_VERSION
