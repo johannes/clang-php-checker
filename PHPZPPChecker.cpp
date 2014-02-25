@@ -47,6 +47,10 @@ public:
   PHPNativeType(const StringRef &name, int pointerLevel = 0)
       : name(name), hasVal(true), pointerLevel(pointerLevel) {}
 
+  PHPNativeType(const StringRef &name, char *pointerLevel)
+      : name(name), hasVal(true), pointerLevel(strlen(pointerLevel)) {}
+
+
   const StringRef &getName() const {
     assert(hasVal);
     return name;
