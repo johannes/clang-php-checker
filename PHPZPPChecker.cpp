@@ -170,13 +170,14 @@ public:
 
 PHPZPPChecker::PHPZPPChecker()
     : IIzpp(0), IIzpp_ex(0), IIzpmp(0), IIzpmp_ex(0) {
-  InvalidTypeBugType.reset(new BugType(CHECKER_CLASS "Invalid type", "PHP ZPP API Error"));
+  InvalidTypeBugType.reset(
+      new BugType(CHECKER_CLASS "Invalid type", "PHP ZPP API Error"));
 
   InvalidModifierBugType.reset(
       new BugType(CHECKER_CLASS "Invalid modifier", "PHP ZPP API Error"));
 
-  WrongArgumentNumberBugType.reset(
-      new BugType(CHECKER_CLASS "Wrong number of zpp arguments", "PHP ZPP API Error"));
+  WrongArgumentNumberBugType.reset(new BugType(
+      CHECKER_CLASS "Wrong number of zpp arguments", "PHP ZPP API Error"));
 }
 
 void PHPZPPChecker::setMap(MapFiller filler) {
