@@ -1,0 +1,9 @@
+Yay! You want to contribute. Fantastic! \o/
+
+Please send a pull request against master. Code should be formatted according
+to LLVM coding style (run clang-format on your changes)
+
+Before merging I will contact you to confirm that you agree to relicense from 
+University of Illinois Open Source License to PHP License in case I move the 
+code to php.net.
+
