@@ -161,23 +161,23 @@ public:
 };
 }
 
-#if (CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 5) || CLANG_VERSION_MAJOR > 3
-/* XXX that probably shouldn't be NULL but a valid checker, */
-# define CHECKER_CLASS NULL,
-#else
-# define CHECKER_CLASS
+BugType *createZZPAPIError(StringRef name) {
+  return new BugType(
+#if (CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 5) ||                  \
+    CLANG_VERSION_MAJOR > 3
+      /* TODO that probably shouldn't be NULL but a valid checker, */
+      NULL,
 #endif
+      name, "PHP ZPP API Error");
+}
 
 PHPZPPChecker::PHPZPPChecker()
     : IIzpp(0), IIzpp_ex(0), IIzpmp(0), IIzpmp_ex(0) {
-  InvalidTypeBugType.reset(
-      new BugType(CHECKER_CLASS "Invalid type", "PHP ZPP API Error"));
+  InvalidTypeBugType.reset(createZZPAPIError("Invalid type"));
 
-  InvalidModifierBugType.reset(
-      new BugType(CHECKER_CLASS "Invalid modifier", "PHP ZPP API Error"));
+  InvalidModifierBugType.reset(createZZPAPIError("Invalid modifier"));
 
-  WrongArgumentNumberBugType.reset(new BugType(
-      CHECKER_CLASS "Wrong number of zpp arguments", "PHP ZPP API Error"));
+  WrongArgumentNumberBugType.reset(createZZPAPIError("Wrong number of zpp arguments"));
 }
 
 void PHPZPPChecker::setMap(MapFiller filler) {
