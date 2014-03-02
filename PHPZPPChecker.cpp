@@ -159,7 +159,7 @@ class PHPZPPChecker
   void reportTooFewArgs(const StringRef &format_spec, char modifier,
                         CheckerContext &C) const;
 
-  bool compareTypeWithSVal(unsigned offset, char modifier, const SVal &val,
+  void compareTypeWithSVal(unsigned offset, char modifier, const SVal &val,
                            const PHPNativeType &expectedType,
                            CheckerContext &C) const;
   bool checkArgs(const StringRef &format_spec, unsigned &offset,
@@ -300,7 +300,7 @@ static const QualType getQualTypeForSVal(const SVal &val) {
   return QualType();
 }
 
-bool PHPZPPChecker::compareTypeWithSVal(unsigned offset, char modifier, const SVal &val,
+void PHPZPPChecker::compareTypeWithSVal(unsigned offset, char modifier, const SVal &val,
                                             const PHPNativeType &expectedType,
                                             CheckerContext &C) const {
  
@@ -310,7 +310,7 @@ bool PHPZPPChecker::compareTypeWithSVal(unsigned offset, char modifier, const SV
     // TODO need a good way to report this, even though this is no error
     llvm::outs() << "Couldn't get type for argument at offset " << offset << "\n";
     val.dump();
-    return false;
+    return;
   }
 
   QualType type = initialType.getCanonicalType();
@@ -331,15 +331,15 @@ bool PHPZPPChecker::compareTypeWithSVal(unsigned offset, char modifier, const SV
 
   if (!match) {
     reportInvalidType(offset, modifier, val, expectedType, initialType, C);
-    return false;
+    return;
   }
 
   if (passedPointerLevel != expectedType.getPointerLevel()) {
     reportInvalidIndirection(offset, modifier, val, expectedType, passedPointerLevel, C);
-    return false;
+    return;
   }
 
-  return true;
+  return;
 }
 
 bool PHPZPPChecker::checkArgs(const StringRef &format_spec,
@@ -374,14 +374,10 @@ bool PHPZPPChecker::checkArgs(const StringRef &format_spec,
       }
 
       const SVal val = Call.getArgSVal(offset);
-      if (!compareTypeWithSVal(offset, *modifier, val, type->second, C)) {
-        // TODO: Move error reporting here?
-
-        // Even if there is a type mismatch we can continue, most of the time
-        // this should be a simple mistake by the user, in rare cases the user
-        // missed an argument and will get many subsequent errors
-      }
-
+      compareTypeWithSVal(offset, *modifier, val, type->second, C);
+      // Even if there is a type mismatch we can continue, most of the time
+      // this should be a simple mistake by the user, in rare cases the user
+      // missed an argument and will get many subsequent errors
     }
   }
   return true;
