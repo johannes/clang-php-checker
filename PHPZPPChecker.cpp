@@ -159,6 +159,10 @@ class PHPZPPChecker
   void reportTooFewArgs(const StringRef &format_spec, char modifier,
                         CheckerContext &C) const;
 
+  void reportTooManyArgs(const StringRef &format_spec, unsigned min_req,
+                         unsigned offset, const CallEvent &Call,
+                         CheckerContext &C) const;
+
   void compareTypeWithSVal(unsigned offset, char modifier, const SVal &val,
                            const PHPNativeType &expectedType,
                            CheckerContext &C) const;
@@ -279,6 +283,20 @@ void PHPZPPChecker::reportUnknownModifier(char modifier,
   C.emitReport(R);
 }
 
+void PHPZPPChecker::reportTooManyArgs(const StringRef &format_spec,
+                                      unsigned min_req, unsigned offset,
+                                      const CallEvent &Call,
+                                      CheckerContext &C) const {
+  SmallString<32> buf;
+  llvm::raw_svector_ostream os(buf);
+  os << "Too many arguments, modifier \"" << format_spec << "\" requires "
+     << offset - min_req + 1 << " arguments.";
+  BugReport *R =
+      new BugReport(*WrongArgumentNumberBugType, os.str(), C.addTransition());
+  R->markInteresting(Call.getArgSVal(offset));
+  C.emitReport(R);
+}
+
 static const QualType getQualTypeForSVal(const SVal &val) {
   const MemRegion *region = val.getAsRegion();
   if (!region) {
@@ -383,7 +401,7 @@ bool PHPZPPChecker::checkArgs(const StringRef &format_spec, unsigned &offset,
 }
 
 void PHPZPPChecker::checkPreCall(const CallEvent &Call,
-                                     CheckerContext &C) const {
+                                 CheckerContext &C) const {
   initIdentifierInfo(C.getASTContext());
 
   if (!Call.isGlobalCFunction())
@@ -415,18 +433,12 @@ void PHPZPPChecker::checkPreCall(const CallEvent &Call,
   }
   const StringRef format_spec = format_spec_sl->getBytes();
 
+  // All preconditions met, we can do the actual check \o/
   if (!checkArgs(format_spec, offset, numArgs, Call, C))
     return;
 
   if (numArgs > 1 + offset) {
-    SmallString<32> buf;
-    llvm::raw_svector_ostream os(buf);
-    os << "Too many arguments, modifier \"" << format_spec << "\" requires "
-       << offset - decl->getMinRequiredArguments() + 1 << " arguments.";
-    BugReport *R =
-        new BugReport(*WrongArgumentNumberBugType, os.str(), C.addTransition());
-    R->markInteresting(Call.getArgSVal(offset));
-    C.emitReport(R);
+    reportTooManyArgs(format_spec, decl->getMinRequiredArguments(), offset, Call, C);
   }
 }
 
