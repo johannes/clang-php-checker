@@ -143,8 +143,22 @@ class PHPZPPChecker
   mutable TypedefMap typedefs;
 
   void initIdentifierInfo(ASTContext &Ctx) const;
-
   const StringLiteral *getCStringLiteral(const SVal &val) const;
+
+  void reportInvalidType(unsigned offset, char modifier, const SVal &val,
+                         const PHPNativeType &expectedType,
+                         const QualType initialType, CheckerContext &C) const;
+
+  void reportInvalidIndirection(unsigned offset, char modifier, const SVal &val,
+                                const PHPNativeType &expectedType,
+                                int passedPointerLevel,
+                                CheckerContext &C) const;
+
+  void reportUnknownModifier(char modifier, CheckerContext &C) const;
+
+  void reportTooFewArgs(const StringRef &format_spec, char modifier,
+                        CheckerContext &C) const;
+
   bool compareTypeWithSVal(unsigned offset, char modifier, const SVal &val,
                            const PHPNativeType &expectedType,
                            CheckerContext &C) const;
@@ -208,6 +222,63 @@ const StringLiteral *PHPZPPChecker::getCStringLiteral(const SVal &val) const {
   return strRegion->getStringLiteral();
 }
 
+void PHPZPPChecker::reportInvalidType(unsigned offset, char modifier,
+                                      const SVal &val,
+                                      const PHPNativeType &expectedType,
+                                      const QualType initialType,
+                                      CheckerContext &C) const {
+  SmallString<256> buf;
+  llvm::raw_svector_ostream os(buf);
+  os << "Type of passed argument ";
+  val.dumpToStream(os);
+  os << " is of type " << initialType.getAsString()
+     << " which did not match expected " << expectedType << " for modifier '"
+     << modifier << "' at offset " << offset + 1 << ".";
+  BugReport *R =
+      new BugReport(*InvalidTypeBugType, os.str(), C.addTransition());
+  R->markInteresting(val);
+  C.emitReport(R);
+}
+
+void PHPZPPChecker::reportInvalidIndirection(unsigned offset, char modifier,
+                                             const SVal &val,
+                                             const PHPNativeType &expectedType,
+                                             int passedPointerLevel,
+                                             CheckerContext &C) const {
+  SmallString<256> buf;
+  llvm::raw_svector_ostream os(buf);
+  os << "Pointer indirection level of passed argument ";
+  val.dumpToStream(os);
+  os << " is " << passedPointerLevel << " which did not match expected "
+     << expectedType.getPointerLevel() << " of " << expectedType
+     << " for modifier '" << modifier << "' at offset " << offset + 1 << ".";
+  BugReport *R =
+      new BugReport(*InvalidTypeBugType, os.str(), C.addTransition());
+  R->markInteresting(val);
+  C.emitReport(R);
+}
+
+void PHPZPPChecker::reportTooFewArgs(const StringRef &format_spec,
+                                     char modifier, CheckerContext &C) const {
+  SmallString<255> buf;
+  llvm::raw_svector_ostream os(buf);
+  os << "Too few arguments for format \"" << format_spec
+     << "\" while checking for modifier '" << modifier << "'.";
+  BugReport *R =
+      new BugReport(*WrongArgumentNumberBugType, os.str(), C.addTransition());
+  C.emitReport(R);
+}
+
+void PHPZPPChecker::reportUnknownModifier(char modifier,
+                                          CheckerContext &C) const {
+  SmallString<32> buf;
+  llvm::raw_svector_ostream os(buf);
+  os << "Unknown modifier '" << modifier << "'";
+  BugReport *R =
+      new BugReport(*InvalidModifierBugType, os.str(), C.addTransition());
+  C.emitReport(R);
+}
+
 static const QualType getQualTypeForSVal(const SVal &val) {
   const MemRegion *region = val.getAsRegion();
   if (!region) {
@@ -259,32 +330,12 @@ bool PHPZPPChecker::compareTypeWithSVal(unsigned offset, char modifier, const SV
   }
 
   if (!match) {
-    SmallString<256> buf;
-    llvm::raw_svector_ostream os(buf);
-    os << "Type of passed argument ";
-    val.dumpToStream(os);
-    os << " is of type " << initialType.getAsString()
-       << " which did not match expected " << expectedType << " for modifier '"
-       << modifier << "' at offset " << offset + 1 << ".";
-    BugReport *R =
-        new BugReport(*InvalidTypeBugType, os.str(), C.addTransition());
-    R->markInteresting(val);
-    C.emitReport(R);
+    reportInvalidType(offset, modifier, val, expectedType, initialType, C);
     return false;
   }
 
   if (passedPointerLevel != expectedType.getPointerLevel()) {
-    SmallString<256> buf;
-    llvm::raw_svector_ostream os(buf);
-    os << "Pointer indirection level of passed argument ";
-    val.dumpToStream(os);
-    os << " is " << passedPointerLevel << " which did not match expected "
-       << expectedType.getPointerLevel() << " of " << expectedType
-       << " for modifier '" << modifier << "' at offset " << offset + 1 << ".";
-    BugReport *R =
-        new BugReport(*InvalidTypeBugType, os.str(), C.addTransition());
-    R->markInteresting(val);
-    C.emitReport(R);
+    reportInvalidIndirection(offset, modifier, val, expectedType, passedPointerLevel, C);
     return false;
   }
 
@@ -303,12 +354,7 @@ bool PHPZPPChecker::checkArgs(const StringRef &format_spec,
     const PHPTypeRange range = map.equal_range(*modifier);
 
     if (range.first == range.second) {
-      SmallString<32> buf;
-      llvm::raw_svector_ostream os(buf);
-      os << "Unknown modifier '" << *modifier << "'";
-      BugReport *R =
-          new BugReport(*InvalidModifierBugType, os.str(), C.addTransition());
-      C.emitReport(R);
+      reportUnknownModifier(*modifier, C);
       return false;
     }
 
@@ -322,13 +368,7 @@ bool PHPZPPChecker::checkArgs(const StringRef &format_spec,
       ++offset;
       debug_stream() << "    I need a " << type->second << " (" << offset << ")\n";
       if (numArgs <= offset) {
-        SmallString<255> buf;
-        llvm::raw_svector_ostream os(buf);
-        os << "Too few arguments for format \"" << format_spec
-           << "\" while checking for modifier '" << *modifier << "'.";
-        BugReport *R = new BugReport(*WrongArgumentNumberBugType, os.str(),
-                                     C.addTransition());
-        C.emitReport(R);
+        reportTooFewArgs(format_spec, *modifier, C);
         debug_stream() << "!!!!I am missing args! " << numArgs << "<=" << offset << "\n";
         return false;
       }
