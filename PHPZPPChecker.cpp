@@ -32,7 +32,7 @@ using namespace ento;
   map.insert(std::pair<char, const PHPNativeType>((format), PHPNativeType()))
 
 namespace {
-raw_ostream &debug_stream() {
+static raw_ostream &debug_stream() {
 #ifdef DEBUG_PHP_ZPP_CHECKER
   return llvm::outs();
 #else
