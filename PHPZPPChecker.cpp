@@ -460,10 +460,6 @@ void PHPZPPChecker::initIdentifierInfo(ASTContext &Ctx) const {
   IIzpmp_ex = &Ctx.Idents.get("zend_parse_method_parameters_ex");
 }
 
-static void fillEmpty(PHPTypeMap &) {
-  // TODO: Throw error
-}
-
 static void initPHPChecker(CheckerManager &mgr) {
   const char *version = getenv("PHP_ZPP_CHECKER_VERSION");
   if (!version) {
@@ -477,8 +473,10 @@ static void initPHPChecker(CheckerManager &mgr) {
               .getValue())
           .Case("PHP55", fillMapPHP55)
           .Case("PHPSizeTInt64", fillMapPHPSizeTInt64)
-          .Default(fillEmpty);
-  checker->setMap(filler);
+          .Default(NULL);
+  if (filler) {
+    checker->setMap(filler);
+  }
 }
 
 
