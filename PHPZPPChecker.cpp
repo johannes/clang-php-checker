@@ -25,12 +25,6 @@
 using namespace clang;
 using namespace ento;
 
-#ifdef DEBUG_PHP_ZPP_CHECKER
-#define debug_stream llvm::outs()
-#else
-#define debug_stream llvm::nulls()
-#endif
-
 #define MAPPING(format, type, pointer_level)                                   \
   map.insert(PHPTypeMap::value_type(                                           \
       (format), PHPNativeType((type), sizeof(pointer_level) - 1)))
@@ -38,6 +32,14 @@ using namespace ento;
   map.insert(std::pair<char, const PHPNativeType>((format), PHPNativeType()))
 
 namespace {
+raw_ostream &debug_stream() {
+#ifdef DEBUG_PHP_ZPP_CHECKER
+  return llvm::outs();
+#else
+  return llvm::nulls();
+#endif
+}
+
 class PHPNativeType {
   const StringRef name;
   const bool hasVal;
@@ -293,11 +295,11 @@ bool PHPZPPChecker::checkArgs(const StringRef &format_spec,
                                   unsigned &offset, const unsigned numArgs,
                                   const CallEvent &Call,
                                   CheckerContext &C) const {
-  Call.dump(debug_stream);
+  Call.dump(debug_stream());
   for (StringRef::const_iterator modifier = format_spec.begin(),
                                  last_mod = format_spec.end();
        modifier != last_mod; ++modifier) {
-    debug_stream << "  I am checking for " << *modifier << "\n";
+    debug_stream() << "  I am checking for " << *modifier << "\n";
     const PHPTypeRange range = map.equal_range(*modifier);
 
     if (range.first == range.second) {
@@ -318,7 +320,7 @@ bool PHPZPPChecker::checkArgs(const StringRef &format_spec,
         continue;
       }
       ++offset;
-      debug_stream << "    I need a " << type->second << " (" << offset << ")\n";
+      debug_stream() << "    I need a " << type->second << " (" << offset << ")\n";
       if (numArgs <= offset) {
         SmallString<255> buf;
         llvm::raw_svector_ostream os(buf);
@@ -327,7 +329,7 @@ bool PHPZPPChecker::checkArgs(const StringRef &format_spec,
         BugReport *R = new BugReport(*WrongArgumentNumberBugType, os.str(),
                                      C.addTransition());
         C.emitReport(R);
-        debug_stream << "!!!!I am missing args! " << numArgs << "<=" << offset << "\n";
+        debug_stream() << "!!!!I am missing args! " << numArgs << "<=" << offset << "\n";
         return false;
       }
 
