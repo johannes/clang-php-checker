@@ -342,10 +342,9 @@ void PHPZPPChecker::compareTypeWithSVal(unsigned offset, char modifier, const SV
   return;
 }
 
-bool PHPZPPChecker::checkArgs(const StringRef &format_spec,
-                                  unsigned &offset, const unsigned numArgs,
-                                  const CallEvent &Call,
-                                  CheckerContext &C) const {
+bool PHPZPPChecker::checkArgs(const StringRef &format_spec, unsigned &offset,
+                              const unsigned numArgs, const CallEvent &Call,
+                              CheckerContext &C) const {
   Call.dump(debug_stream());
   for (StringRef::const_iterator modifier = format_spec.begin(),
                                  last_mod = format_spec.end();
