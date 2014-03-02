@@ -177,7 +177,7 @@ public:
 };
 }
 
-BugType *createZZPAPIError(StringRef name) {
+static BugType *createZZPAPIError(StringRef name) {
   return new BugType(
 #if (CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 5) ||                  \
     CLANG_VERSION_MAJOR > 3
