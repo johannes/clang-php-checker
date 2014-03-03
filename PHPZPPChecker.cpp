@@ -447,7 +447,7 @@ void PHPZPPChecker::checkASTDecl(const TypedefDecl *td, AnalysisManager &Mgr, Bu
   // the check?
   // for (DeclContext::decl_iterator it = decl->getParent()->decls_begin(); it != decl->getParent()->decls_end(); ++it) { if (isa<TypedefDecl>(*it)) {
 
-  typedefs.insert(std::pair<const StringRef, QualType>(td->getName(), td->getUnderlyingType()));
+  typedefs.insert(TypedefMap::value_type(td->getName(), td->getUnderlyingType()));
 }
 
 void PHPZPPChecker::initIdentifierInfo(ASTContext &Ctx) const {
