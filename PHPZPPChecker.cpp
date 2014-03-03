@@ -59,7 +59,7 @@ void mapping(PHPTypeMap &map, char format, StringRef type, LevelT pointer_level)
   map.insert(PHPTypeMap::value_type(format, PHPNativeType(type, pointer_level)));
 }
 
-void mapping(PHPTypeMap &map, char format) {
+static void mapping(PHPTypeMap &map, char format) {
   map.insert(PHPTypeMap::value_type(format, PHPNativeType()));
 }
 
