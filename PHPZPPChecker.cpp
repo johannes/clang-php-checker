@@ -26,14 +26,6 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-static raw_ostream &debug_stream() {
-#ifdef DEBUG_PHP_ZPP_CHECKER
-  return llvm::outs();
-#else
-  return llvm::nulls();
-#endif
-}
-
 class PHPNativeType {
   const StringRef name;
   const bool hasVal;
@@ -60,18 +52,7 @@ public:
   operator bool() const { return hasVal; }
 };
 
-template <typename ostream>
-ostream &operator<<(ostream &os, const PHPNativeType &type) {
-  os << type.getName() << " ";
-  for (int i = 0; i < type.getPointerLevel(); ++i) {
-    os << "*";
-  }
-  return os;
-}
-
 typedef std::multimap<char, const PHPNativeType> PHPTypeMap;
-typedef std::pair<const PHPTypeMap::const_iterator,
-                  const PHPTypeMap::const_iterator> PHPTypeRange;
 
 template<typename LevelT>
 void mapping(PHPTypeMap &map, char format, StringRef type, LevelT pointer_level) {
@@ -182,6 +163,26 @@ public:
   void checkASTDecl(const TypedefDecl *td, AnalysisManager &Mgr,
                     BugReporter &BR) const;
 };
+}
+
+template <typename ostream>
+ostream &operator<<(ostream &os, const PHPNativeType &type) {
+  os << type.getName() << " ";
+  for (int i = 0; i < type.getPointerLevel(); ++i) {
+    os << "*";
+  }
+  return os;
+}
+
+typedef std::pair<const PHPTypeMap::const_iterator,
+                  const PHPTypeMap::const_iterator> PHPTypeRange;
+
+static raw_ostream &debug_stream() {
+#ifdef DEBUG_PHP_ZPP_CHECKER
+  return llvm::outs();
+#else
+  return llvm::nulls();
+#endif
 }
 
 static BugType *createZZPAPIError(StringRef name) {
