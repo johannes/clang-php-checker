@@ -25,12 +25,6 @@
 using namespace clang;
 using namespace ento;
 
-#define MAPPING(format, type, pointer_level)                                   \
-  map.insert(PHPTypeMap::value_type(                                           \
-      (format), PHPNativeType((type), sizeof(pointer_level) - 1)))
-#define MAPPING_EMPTY(format)                                                  \
-  map.insert(std::pair<char, const PHPNativeType>((format), PHPNativeType()))
-
 namespace {
 static raw_ostream &debug_stream() {
 #ifdef DEBUG_PHP_ZPP_CHECKER
@@ -50,7 +44,7 @@ public:
   PHPNativeType(const StringRef &name, int pointerLevel = 0)
       : name(name), hasVal(true), pointerLevel(pointerLevel) {}
 
-  PHPNativeType(const StringRef &name, char *pointerLevel)
+  PHPNativeType(const StringRef &name, const char *pointerLevel)
       : name(name), hasVal(true), pointerLevel(strlen(pointerLevel)) {}
 
 
@@ -79,54 +73,63 @@ typedef std::multimap<char, const PHPNativeType> PHPTypeMap;
 typedef std::pair<const PHPTypeMap::const_iterator,
                   const PHPTypeMap::const_iterator> PHPTypeRange;
 
+template<typename LevelT>
+void mapping(PHPTypeMap &map, char format, StringRef type, LevelT pointer_level) {
+  map.insert(PHPTypeMap::value_type(format, PHPNativeType(type, pointer_level)));
+}
+
+void mapping(PHPTypeMap &map, char format) {
+  map.insert(PHPTypeMap::value_type(format, PHPNativeType()));
+}
+
 // These mappings map a zpp modifier to underlying types. The second argument
 // refers to the indirectionlevel, mind: zpp receives the address of the object
 // to store in wich adds a level.
 // Some types return multiple values, these are added multiple times inorder to
 // this list (i.e. a string "s" consists of a char array and length)
 static void fillMapPHPBase(PHPTypeMap &map) {
-  MAPPING('a', "zval", "**");
-  MAPPING('A', "zval", "**");
-  MAPPING('b', "zend_bool", "*");
-  MAPPING('C', "zend_class_entry", "**");
-  MAPPING('d', "double", "*");
-  MAPPING('f', "zend_fcall_info", "*");
-  MAPPING('f', "zend_fcall_info_cache", "*");
-  MAPPING('h', "HashTable", "**");
-  MAPPING('H', "HashTable", "**");
-  MAPPING('o', "zval", "**");
-  MAPPING('O', "zval", "**");
-  MAPPING('O', "zend_class_entry", "*");
-  MAPPING('r', "zval", "**");
-  MAPPING('z', "zval", "**");
-  MAPPING('Z', "zval", "***");
-  MAPPING_EMPTY('|');
-  MAPPING_EMPTY('/');
-  MAPPING_EMPTY('!');
-  MAPPING('+', "zval", "****");
-  MAPPING('+', "int", "*");
-  MAPPING('*', "zval", "****");
-  MAPPING('*', "int", "*");
+  mapping(map, 'a', "zval", "**");
+  mapping(map, 'A', "zval", "**");
+  mapping(map, 'b', "zend_bool", "*");
+  mapping(map, 'C', "zend_class_entry", "**");
+  mapping(map, 'd', "double", "*");
+  mapping(map, 'f', "zend_fcall_info", "*");
+  mapping(map, 'f', "zend_fcall_info_cache", "*");
+  mapping(map, 'h', "HashTable", "**");
+  mapping(map, 'H', "HashTable", "**");
+  mapping(map, 'o', "zval", "**");
+  mapping(map, 'O', "zval", "**");
+  mapping(map, 'O', "zend_class_entry", "*");
+  mapping(map, 'r', "zval", "**");
+  mapping(map, 'z', "zval", "**");
+  mapping(map, 'Z', "zval", "***");
+  mapping(map, '|');
+  mapping(map, '/');
+  mapping(map, '!');
+  mapping(map, '+', "zval", "****");
+  mapping(map, '+', "int", "*");
+  mapping(map, '*', "zval", "****");
+  mapping(map, '*', "int", "*");
 }
 
 static void fillMapPHP55(PHPTypeMap &map) {
   fillMapPHPBase(map);
-  MAPPING('l', "long", "*");
-  MAPPING('L', "long", "*");
-  MAPPING('p', "char", "**");
-  MAPPING('p', "int", "*");
-  MAPPING('s', "char", "**");
-  MAPPING('s', "int", "*");
+  mapping(map, 'l', "long", "*");
+  mapping(map, 'L', "long", "*");
+  mapping(map, 'p', "char", "**");
+  mapping(map, 'p', "int", "*");
+  mapping(map, 's', "char", "**");
+  mapping(map, 's', "int", "*");
 }
 
 static void fillMapPHPSizeTInt64(PHPTypeMap &map) {
   fillMapPHPBase(map);
-  MAPPING('i', "zend_int_t", "*");
-  MAPPING('I', "zend_int_t", "*");
-  MAPPING('P', "char", "**");
-  MAPPING('P', "zend_size_t", "*");
-  MAPPING('S', "char", "**");
-  MAPPING('S', "zend_size_t", "*");
+  mapping(map, 'i', "zend_int_t", "*");
+  mapping(map, 'I', "zend_int_t", "*");
+  mapping(map, 'P', "char", "**");
+  mapping(map, 'P', "zend_size_t", "*");
+  mapping(map, 'S', "char", "**");
+  mapping(map, 'S', "zend_size_t", "*");
 }
 
 class PHPZPPChecker
