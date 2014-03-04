@@ -13,8 +13,6 @@ include_directories( ${CLANG_INCLUDE_DIRS} )
 add_definitions("-fno-rtti")
 add_definitions("-D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS ")
 
-add_library(clangPHPChecker SHARED  PHPZPPChecker.cpp)
-
 #target_link_libraries(clangPHPChecker ${CLANG_LIBS} ${LLVM_LIBS_CORE} )
 if (WIN32)
 	add_library(clangPHPChecker SHARED  PHPZPPChecker.cpp PHPChecker.def)
