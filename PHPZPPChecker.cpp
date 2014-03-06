@@ -484,10 +484,10 @@ static void initPHPChecker(CheckerManager &mgr) {
 }
 
 
-extern "C" CLANGPHPCHECKER_EXPORT void clang_registerCheckers(CheckerRegistry &registry) {
+extern "C" void clang_registerCheckers(CheckerRegistry &registry) {
   registry.addChecker(initPHPChecker, "php.ZPPChecker",
                       "Check zend_parse_parameters usage");
 }
 
-extern "C" CLANGPHPCHECKER_EXPORT const char clang_analyzerAPIVersionString[] =
+extern "C" const char clang_analyzerAPIVersionString[] =
     CLANG_ANALYZER_API_VERSION_STRING;
