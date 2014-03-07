@@ -39,13 +39,6 @@ public:
   PHPNativeType(StringRef name, const char *pointerLevel)
       : name(name), hasVal(true), pointerLevel(strlen(pointerLevel)) {}
 
-  PHPNativeType(const PHPNativeType &type)
-      : hasVal(type), pointerLevel(type.getPointerLevel()) {
-    if (hasVal) {
-      name = type.getName();
-    }
-  }
-
   StringRef getName() const {
     assert(hasVal);
     return name;
@@ -56,17 +49,19 @@ public:
   operator bool() const { return hasVal; }
 };
 
-typedef std::multimap<char, PHPNativeType> PHPTypeMap;
+typedef std::vector<PHPNativeType> PHPTypeVector;
+typedef std::map<char, PHPTypeVector > PHPTypeMap;
 
-PHPTypeMap::iterator operator<<(PHPTypeMap &map, char format) {
-  return map.insert(PHPTypeMap::value_type(format, PHPNativeType()));
+PHPTypeVector &operator<<(PHPTypeMap &map, char format) {
+  return map.insert(PHPTypeMap::value_type(
+                        format, PHPTypeVector())).first->second;
 }
 
-PHPNativeType &operator+=(PHPTypeMap::iterator it, const StringRef &name) {
-  char modifier = it->first;
+PHPTypeVector &operator&(PHPTypeVector &vec,
+                                       const StringRef &name) {
   std::pair<StringRef, StringRef> type = name.split(' ');
-  it->second = PHPNativeType(type.first, type.second.size());
-  return it->second;
+  vec.push_back(PHPNativeType(type.first, type.second.size()));
+  return vec;
 }
 
 // These mappings map a zpp modifier to underlying types.
@@ -75,48 +70,48 @@ PHPNativeType &operator+=(PHPTypeMap::iterator it, const StringRef &name) {
 // Some types return multiple values, these are added multiple times in order to
 // this list (i.e. a string "s" consists of a char array and length)
 static void fillMapPHPBase(PHPTypeMap &map) {
-  map << 'a' += "zval **";
-  map << 'A' += "zval **";
-  map << 'b' += "zend_bool *";
-  map << 'C' += "zend_class_entry **";
-  map << 'd' += "double *";
-  map << 'f' += "zend_fcall_info *";
-  map << 'f' += "zend_fcall_info_cache *";
-  map << 'h' += "HashTable **";
-  map << 'H' += "HashTable **";
-  map << 'o' += "zval **";
-  map << 'O' += "zval **";
-  map << 'O' += "zend_class_entry *";
-  map << 'r' += "zval **";
-  map << 'z' += "zval **";
-  map << 'Z' += "zval ***";
+  map << 'a' & "zval **";
+  map << 'A' & "zval **";
+  map << 'b' & "zend_bool *";
+  map << 'C' & "zend_class_entry **";
+  map << 'd' & "double *";
+  map << 'f' & "zend_fcall_info *"
+             & "zend_fcall_info_cache *";
+  map << 'h' & "HashTable **";
+  map << 'H' & "HashTable **";
+  map << 'o' & "zval **";
+  map << 'O' & "zval **"
+             & "zend_class_entry *";
+  map << 'r' & "zval **";
+  map << 'z' & "zval **";
+  map << 'Z' & "zval ***";
   map << '|';
   map << '/';
   map << '!';
-  map << '+' += "zval ****";
-  map << '+' += "int *";
-  map << '*' += "zval ****";
-  map << '*' += "int *";
+  map << '+' & "zval ****"
+             & "int *";
+  map << '*' & "zval ****"
+             & "int *";
 }
 
 static void fillMapPHP55(PHPTypeMap &map) {
   fillMapPHPBase(map);
-  map << 'l' += "long *";
-  map << 'L' += "long *";
-  map << 'p' += "char **";
-  map << 'p' += "int *";
-  map << 's' += "char **";
-  map << 's' += "int *";
+  map << 'l' & "long *";
+  map << 'L' & "long *";
+  map << 'p' & "char **"
+             & "int *";
+  map << 's' & "char **"
+             & "int *";
 }
 
 static void fillMapPHPSizeTInt64(PHPTypeMap &map) {
   fillMapPHPBase(map);
-  map << 'i' += "zend_int_t *";
-  map << 'I' += "zend_int_t *";
-  map << 'P' += "char **";
-  map << 'P' += "zend_size_t *";
-  map << 'S' += "char **";
-  map << 'S' += "zend_size_t *";
+  map << 'i' & "zend_int_t *";
+  map << 'I' & "zend_int_t *";
+  map << 'P' & "char **"
+             & "zend_size_t *";
+  map << 'S' & "char **"
+             & "zend_size_t *";
 }
 
 class PHPZPPChecker
@@ -179,9 +174,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const PHPNativeType &type) 
 }
 
 }
-
-typedef std::pair<const PHPTypeMap::const_iterator,
-                  const PHPTypeMap::const_iterator> PHPTypeRange;
 
 static raw_ostream &debug_stream() {
 #ifdef DEBUG_PHP_ZPP_CHECKER
@@ -378,22 +370,17 @@ bool PHPZPPChecker::checkArgs(const StringRef &format_spec, unsigned &offset,
                                  last_mod = format_spec.end();
        modifier != last_mod; ++modifier) {
     debug_stream() << "  I am checking for " << *modifier << "\n";
-    const PHPTypeRange range = map.equal_range(*modifier);
+    const PHPTypeMap::const_iterator it = map.find(*modifier);
 
-    if (range.first == range.second) {
+    if (it == map.end()) {
       reportUnknownModifier(*modifier, C);
       return false;
     }
 
-    for (PHPTypeMap::const_iterator type = range.first; type != range.second;
-         ++type) {
-      if (!type->second) {
-        // Current modifier doesn't need an argument, these are special things
-        // like |, ! or /
-        continue;
-      }
+    for (PHPTypeVector::const_iterator type = it->second.begin();
+         type != it->second.end(); ++type) {
       ++offset;
-      debug_stream() << "    I need a " << type->second << " (" << offset << ")\n";
+      debug_stream() << "    I need a " << *type << " (" << offset << ")\n";
       if (numArgs <= offset) {
         reportTooFewArgs(format_spec, *modifier, C);
         debug_stream() << "!!!!I am missing args! " << numArgs << "<=" << offset << "\n";
@@ -401,7 +388,7 @@ bool PHPZPPChecker::checkArgs(const StringRef &format_spec, unsigned &offset,
       }
 
       const SVal val = Call.getArgSVal(offset);
-      compareTypeWithSVal(offset, *modifier, val, type->second, C);
+      compareTypeWithSVal(offset, *modifier, val, *type, C);
       // Even if there is a type mismatch we can continue, most of the time
       // this should be a simple mistake by the user, in rare cases the user
       // missed an argument and will get many subsequent errors
