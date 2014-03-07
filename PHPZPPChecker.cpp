@@ -27,90 +27,96 @@ using namespace ento;
 
 namespace {
 class PHPNativeType {
-  const StringRef name;
-  const bool hasVal;
+  StringRef name;
+  bool hasVal;
   int pointerLevel;
 
 public:
-  PHPNativeType() : hasVal(false) {}
-  PHPNativeType(const StringRef &name, int pointerLevel = 0)
+  PHPNativeType() : hasVal(false), pointerLevel(0) {}
+  PHPNativeType(StringRef name, int pointerLevel = 0)
       : name(name), hasVal(true), pointerLevel(pointerLevel) {}
 
-  PHPNativeType(const StringRef &name, const char *pointerLevel)
+  PHPNativeType(StringRef name, const char *pointerLevel)
       : name(name), hasVal(true), pointerLevel(strlen(pointerLevel)) {}
 
+  PHPNativeType(const PHPNativeType &type)
+      : hasVal(type), pointerLevel(type.getPointerLevel()) {
+    if (hasVal) {
+      name = type.getName();
+    }
+  }
 
-  const StringRef &getName() const {
+  StringRef getName() const {
     assert(hasVal);
     return name;
   }
 
-  int getPointerLevel() const {
-    return pointerLevel;
-  }
+  int getPointerLevel() const { return pointerLevel; }
 
   operator bool() const { return hasVal; }
 };
 
-typedef std::multimap<char, const PHPNativeType> PHPTypeMap;
+typedef std::multimap<char, PHPNativeType> PHPTypeMap;
 
-template<typename LevelT>
-void mapping(PHPTypeMap &map, char format, StringRef type, LevelT pointer_level) {
-  map.insert(PHPTypeMap::value_type(format, PHPNativeType(type, pointer_level)));
+PHPTypeMap::iterator operator<<(PHPTypeMap &map, char format) {
+  return map.insert(PHPTypeMap::value_type(format, PHPNativeType()));
 }
 
-static void mapping(PHPTypeMap &map, char format) {
-  map.insert(PHPTypeMap::value_type(format, PHPNativeType()));
+PHPNativeType &operator+=(PHPTypeMap::iterator it, const StringRef &name) {
+  char modifier = it->first;
+  std::pair<StringRef, StringRef> type = name.split(' ');
+  it->second = PHPNativeType(type.first, type.second.size());
+  return it->second;
 }
 
-// These mappings map a zpp modifier to underlying types. The second argument
-// refers to the indirectionlevel, mind: zpp receives the address of the object
-// to store in wich adds a level.
-// Some types return multiple values, these are added multiple times inorder to
+// These mappings map a zpp modifier to underlying types.
+// Mind: zpp receives the address of the object to store in wich adds an
+// indirection level.
+// Some types return multiple values, these are added multiple times in order to
 // this list (i.e. a string "s" consists of a char array and length)
 static void fillMapPHPBase(PHPTypeMap &map) {
-  mapping(map, 'a', "zval", "**");
-  mapping(map, 'A', "zval", "**");
-  mapping(map, 'b', "zend_bool", "*");
-  mapping(map, 'C', "zend_class_entry", "**");
-  mapping(map, 'd', "double", "*");
-  mapping(map, 'f', "zend_fcall_info", "*");
-  mapping(map, 'f', "zend_fcall_info_cache", "*");
-  mapping(map, 'h', "HashTable", "**");
-  mapping(map, 'H', "HashTable", "**");
-  mapping(map, 'o', "zval", "**");
-  mapping(map, 'O', "zval", "**");
-  mapping(map, 'O', "zend_class_entry", "*");
-  mapping(map, 'r', "zval", "**");
-  mapping(map, 'z', "zval", "**");
-  mapping(map, 'Z', "zval", "***");
-  mapping(map, '|');
-  mapping(map, '/');
-  mapping(map, '!');
-  mapping(map, '+', "zval", "****");
-  mapping(map, '+', "int", "*");
-  mapping(map, '*', "zval", "****");
-  mapping(map, '*', "int", "*");
+  map << 'a' += "zval **";
+  map << 'A' += "zval **";
+  map << 'b' += "zend_bool *";
+  map << 'C' += "zend_class_entry **";
+  map << 'd' += "double *";
+  map << 'f' += "zend_fcall_info *";
+  map << 'f' += "zend_fcall_info_cache *";
+  map << 'h' += "HashTable **";
+  map << 'H' += "HashTable **";
+  map << 'o' += "zval **";
+  map << 'O' += "zval **";
+  map << 'O' += "zend_class_entry *";
+  map << 'r' += "zval **";
+  map << 'z' += "zval **";
+  map << 'Z' += "zval ***";
+  map << '|';
+  map << '/';
+  map << '!';
+  map << '+' += "zval ****";
+  map << '+' += "int *";
+  map << '*' += "zval ****";
+  map << '*' += "int *";
 }
 
 static void fillMapPHP55(PHPTypeMap &map) {
   fillMapPHPBase(map);
-  mapping(map, 'l', "long", "*");
-  mapping(map, 'L', "long", "*");
-  mapping(map, 'p', "char", "**");
-  mapping(map, 'p', "int", "*");
-  mapping(map, 's', "char", "**");
-  mapping(map, 's', "int", "*");
+  map << 'l' += "long *";
+  map << 'L' += "long *";
+  map << 'p' += "char **";
+  map << 'p' += "int *";
+  map << 's' += "char **";
+  map << 's' += "int *";
 }
 
 static void fillMapPHPSizeTInt64(PHPTypeMap &map) {
   fillMapPHPBase(map);
-  mapping(map, 'i', "zend_int_t", "*");
-  mapping(map, 'I', "zend_int_t", "*");
-  mapping(map, 'P', "char", "**");
-  mapping(map, 'P', "zend_size_t", "*");
-  mapping(map, 'S', "char", "**");
-  mapping(map, 'S', "zend_size_t", "*");
+  map << 'i' += "zend_int_t *";
+  map << 'I' += "zend_int_t *";
+  map << 'P' += "char **";
+  map << 'P' += "zend_size_t *";
+  map << 'S' += "char **";
+  map << 'S' += "zend_size_t *";
 }
 
 class PHPZPPChecker
@@ -163,15 +169,15 @@ public:
   void checkASTDecl(const TypedefDecl *td, AnalysisManager &Mgr,
                     BugReporter &BR) const;
 };
-}
 
-template <typename ostream>
-ostream &operator<<(ostream &os, const PHPNativeType &type) {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const PHPNativeType &type) {
   os << type.getName() << " ";
   for (int i = 0; i < type.getPointerLevel(); ++i) {
     os << "*";
   }
   return os;
+}
+
 }
 
 typedef std::pair<const PHPTypeMap::const_iterator,
