@@ -110,6 +110,10 @@ static void fillMapPHPSizeTInt64(PHPTypeMap &map) {
   map << 'L' & "zend_long *";
   map << 'P' & "zend_string *";
   map << 'S' & "zend_string *";
+  map << 'p' & "char **"
+             & "size_t *";
+  map << 's' & "char **"
+             & "size_t *";
 }
 
 class PHPZPPChecker
