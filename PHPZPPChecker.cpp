@@ -120,10 +120,16 @@ class PHPZPPChecker
     : public Checker<check::PreCall, check::ASTDecl<TypedefDecl> > {
   mutable IdentifierInfo *IIzpp, *IIzpp_ex, *IIzpmp, *IIzpmp_ex;
 
+#if (CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 5) ||                  \
+    CLANG_VERSION_MAJOR > 3
+  std::unique_ptr<BugType> InvalidTypeBugType;
+  std::unique_ptr<BugType> InvalidModifierBugType;
+  std::unique_ptr<BugType> WrongArgumentNumberBugType;
+#else
   OwningPtr<BugType> InvalidTypeBugType;
   OwningPtr<BugType> InvalidModifierBugType;
   OwningPtr<BugType> WrongArgumentNumberBugType;
-
+#endif
   PHPTypeMap map;
 
   typedef std::map<const StringRef, const QualType> TypedefMap;

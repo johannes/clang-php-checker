@@ -10,7 +10,7 @@ link_directories( ${LLVM_LIB_DIR} )
 Find_Package(Clang REQUIRED)
 include_directories( ${CLANG_INCLUDE_DIRS} )
 
-add_definitions("-fno-rtti")
+add_definitions("-fno-rtti -std=c++11")
 add_definitions("-D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS ")
 
 #target_link_libraries(clangPHPChecker ${CLANG_LIBS} ${LLVM_LIBS_CORE} )
