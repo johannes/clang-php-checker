@@ -52,15 +52,15 @@ Usage:
            -analyze \
            -analyzer-checker=php.ZPPChecker \
            -load=/path/to/PHPChecker.so \
-	   -analyzer-config php-zpp-version=PHP55 \
+	   -analyzer-config php-zpp-version=PHP5 \
            source_fileto_check.c
   Note: The -cc1 frontend doesn't include system headers and such by default.
   For more than simple test files this might not be useful. A call like
    $ clang -Xclang -fcolor-diagnostics \
            -Xclang -analyze \
-           -Xclang -analyzer-checker=php.ZPPChecker55 \
+           -Xclang -analyzer-checker=php.ZPPChecker5 \
            -Xclang -load=/path/to/PHPChecker.so \
-	   -Xclang -analyzer-config -Xclang php-zpp-version=PHP55 \
+	   -Xclang -analyzer-config -Xclang php-zpp-version=PHP5 \
            source_fileto_check.c
   might be more helpful. This frontend behaves like gcc, clang-specific
   options have to be prefixed with -Xclang. See clang documentation for
@@ -72,7 +72,7 @@ Usage:
                 ./configure --enable-php-features-as-usual
    $ scan-build --use-analyzer=/path/to/bin/clang \
                 -load-plugin /path/to/PHPChecker.so \
-                -enable-checker php.ZPPChecker55 \
+                -enable-checker php.ZPPChecker5 \
                 make
   So first we configure PHP, using the wrapper script ensures to setup the proper
   compiler but we don't want to run all checks during configure phase. After that
