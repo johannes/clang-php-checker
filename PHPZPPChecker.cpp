@@ -94,7 +94,7 @@ static void fillMapPHPBase(PHPTypeMap &map) {
              & "int *";
 }
 
-static void fillMapPHP55(PHPTypeMap &map) {
+static void fillMapPHP5(PHPTypeMap &map) {
   fillMapPHPBase(map);
   map << 'l' & "long *";
   map << 'L' & "long *";
@@ -104,12 +104,12 @@ static void fillMapPHP55(PHPTypeMap &map) {
              & "int *";
 }
 
-static void fillMapPHPSizeTInt64(PHPTypeMap &map) {
+static void fillMapPHP7(PHPTypeMap &map) {
   fillMapPHPBase(map);
   map << 'l' & "zend_long *";
   map << 'L' & "zend_long *";
-  map << 'P' & "zend_string *";
-  map << 'S' & "zend_string *";
+  map << 'P' & "zend_string **";
+  map << 'S' & "zend_string **";
   map << 'p' & "char **"
              & "size_t *";
   map << 's' & "char **"
@@ -462,7 +462,7 @@ void PHPZPPChecker::initIdentifierInfo(ASTContext &Ctx) const {
 static void initPHPChecker(CheckerManager &mgr) {
   const char *version = getenv("PHP_ZPP_CHECKER_VERSION");
   if (!version) {
-    version = "PHP55";
+    version = "PHP5";
   }
   PHPZPPChecker *checker = mgr.registerChecker<PHPZPPChecker>();
   PHPZPPChecker::MapFiller filler =
@@ -470,8 +470,8 @@ static void initPHPChecker(CheckerManager &mgr) {
           mgr.getAnalyzerOptions()
               .Config.GetOrCreateValue("php-zpp-version", version)
               .getValue())
-          .Case("PHP55", fillMapPHP55)
-          .Case("PHPSizeTInt64", fillMapPHPSizeTInt64)
+          .Case("PHP5", fillMapPHP5)
+          .Case("PHP7", fillMapPHP7)
           .Default(NULL);
   if (filler) {
     checker->setMap(filler);
