@@ -84,7 +84,6 @@ static void fillMapPHPBase(PHPTypeMap &map) {
              & "zend_class_entry *";
   map << 'r' & "zval **";
   map << 'z' & "zval **";
-  map << 'Z' & "zval ***";
   map << '|';
   map << '/';
   map << '!';
@@ -102,6 +101,7 @@ static void fillMapPHP5(PHPTypeMap &map) {
              & "int *";
   map << 's' & "char **"
              & "int *";
+  map << 'Z' & "zval ***";
 }
 
 static void fillMapPHP7(PHPTypeMap &map) {
