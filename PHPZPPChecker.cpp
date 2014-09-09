@@ -195,8 +195,7 @@ static BugType *createZZPAPIError(StringRef name) {
   return new BugType(
 #if (CLANG_VERSION_MAJOR == 3 && CLANG_VERSION_MINOR >= 5) ||                  \
     CLANG_VERSION_MAJOR > 3
-      /* TODO that probably shouldn't be NULL but a valid checker, */
-      NULL,
+      new CheckerBase(),
 #endif
       name, "PHP ZPP API Error");
 }
