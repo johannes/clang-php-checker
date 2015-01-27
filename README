@@ -51,7 +51,7 @@ Usage:
            -fcolor-diagnostics \
            -analyze \
            -analyzer-checker=php.ZPPChecker \
-           -load=/path/to/PHPChecker.so \
+           -load /path/to/PHPChecker.so \
 	   -analyzer-config php-zpp-version=PHP5 \
            source_fileto_check.c
   Note: The -cc1 frontend doesn't include system headers and such by default.
